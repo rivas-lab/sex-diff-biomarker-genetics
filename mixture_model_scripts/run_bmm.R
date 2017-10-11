@@ -33,7 +33,7 @@ if (!trait.type %in% c('binary', 'quant')){ stop ("please specify the type of tr
 
 
 filt <- ifelse(length(args)>3 & args[4] == "FALSE", FALSE, TRUE) # whether to filter, optional (default TRUE)
-test.type <- ifelse(length(args) == 5), args[5], 'NA') # parse test type ('vb' or 'opt'), optional
+test.type <- ifelse(length(args) == 5, args[5], NA) # parse test type ('vb' or 'opt'), optional
 
 
 loadDat <- function(trait, trait.type, se.filt=FALSE){
@@ -71,10 +71,9 @@ runM1 <- function(trait, trait.type, filt=FALSE){
 
     dat <- loadDat(trait, trait.type, se.filt=filt)
     dat$dat$K <- 2
-    fit1 <- timeModel(
-        stan(file = "models/model1_loglik.stan",  
+    fit1 <- stan(file = "models/model1_loglik.stan",  
             data = dat$dat,    
-            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200))
+            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
    
     print(fit1, pars=c("Sigma", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     save(dat, fit1, file=paste(c(DATA.FOLDER, "f_m1_", trait, ".RData"), collapse=""))
@@ -86,10 +85,9 @@ runM2 <- function(trait, trait.type, filt=FALSE){
     dat <- loadDat(trait, trait.type, se.filt=filt)
     dat$dat$K <- 4
 
-    fit2 <- timeModel(
-        stan(file = "models/model2_loglik.stan",  
+    fit2 <- stan(file = "models/model2_loglik.stan",  
             data = dat$dat,    
-            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200))
+            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
   
     print(fit2, pars=c("sigmasq", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
 
@@ -101,31 +99,75 @@ runM2.a <- function(trait, trait.type, filt=FALSE){
     
     dat <- loadDat(trait, trait.type, se.filt=filt)
     dat$dat$K <- 2
-    fit2 <- timeModel(
-        stan(file = "models/model2_alt_loglik.stan",  
+    fit2 <- stan(file = "models/model2_alt_loglik.stan",  
             data = dat$dat,    
-            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200))
+            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
  
     print(fit2, pars=c("sigmasq", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
 
     save(dat, fit2, file=paste(c(DATA.FOLDER, "f_m2.a_", trait, ".RData"), collapse=""))
 }
 
+testModels <- function(trait, trait.type, filt, test.type){
+    # run test models with optimizing or variational bayes
+
+    dat <- loadDat(trait, trait.type, se.filt=filt)
+
+    if (test.type == "opt"){
+
+        # run model 1 with optimizing
+        dat$dat$K <- 2
+
+        m1 <- stan_model("models/model1.stan")
+        f1 <- timeModel(optimizing(m1, dat$dat, hessian=TRUE))
+        print(f1)
+
+        dat$dat$K <- 4
+        m2 <- stan_model("models/model2.stan")
+        f2 <- timeModel(optimizing(m2, dat$dat, hessian=TRUE))
+        print(f2)
+
+        save(f1, f2, file=sprintf("%s/test_opt_%s.RData", DATA.FOLDER, trait))
+
+    } 
+    if (test.type == "vb") {
+        dat$dat$K <- 2
+
+        m1 <- stan_model("models/model1.stan")
+        f1.v <- timeModel(vb(m1, dat$dat))
+        print(f1.v)
+
+        dat$dat$K <- 4
+
+        m2 <- stan_model("models/model2.stan")
+        f2.v <- timeModel(vb(m2, dat$dat))
+        print(f2.v)
+        save(f1.v, f2.v, file=sprintf("%s/test_vb_%s.RData", DATA.FOLDER, trait))
+
+    }
+}
+
 
 # run test models if specified
-if (!isNA(test.type)){
+if (!is.na(test.type)){
+    print("TESTING")
 	testModels(trait, trait.type, filt, test.type)
-	exit()
+
+} else {
+
+    # run models 
+    if (model==1){
+        print("running M1")
+        runM1(trait, trait.type, filt)
+    }
+    if (model==2){
+        runM2(trait, trait.type, filt)
+    }
+    if (model==3){
+        runM2.a(trait, trait.type, filt)
+    }
+
 }
 
 
-# run models 
-if (model==1){
-    runM1(trait, trait.type, filt)
-}
-if (model==2){
-    runM2(trait, trait.type, filt)
-}
-if (model==3){
-    runM2.a(trait, trait.type, filt)
-}
+

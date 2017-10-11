@@ -20,14 +20,18 @@ old.to.new <- split(map.data$curr, map.data$old)
 
 mapPheIDs <- function(phe_file, phe_id){
 	phe.data <- read.table(sprintf('%s/%s', PHE_IN_DIR, phe_file), header=FALSE, 
-		colClasses=c("character", "character", "factor"))
+		colClasses=c("character", "character", "numeric"))
 	colnames(phe.data) <- c("ID", "ID2", "phe")
 
 	print(table(phe.data$ID %in% names(old.to.new)))
 
 	phe.data.filt <- phe.data[phe.data$ID %in% names(old.to.new),]
 	phe.data.filt$ID.new <- old.to.new[phe.data.filt$ID] 
+	print(summary(phe.data.filt$phe))
+	print(table(phe.data.filt$phe <0))
+	phe.data.filt <- phe.data.filt[phe.data.filt$phe >0, ] ### remove missing
 	phe.data.new <- cbind(phe.data.filt$ID.new, phe.data.filt$ID.new, phe.data.filt$phe)
+
 	write.table(phe.data.new, file=sprintf("%s/%s.phe", PHE_OUT_DIR, phe_id), col.names=FALSE, row.names=FALSE, quote=FALSE)	
 }
 

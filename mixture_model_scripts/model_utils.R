@@ -12,7 +12,7 @@ require('qqman')
 require('rstan')
 
 # hard-coded cutoffs, we can adjust
-BINARY.SE.CUTOFF <- 1
+BINARY.SE.CUTOFF <- 2 ## might want to adjust
 QUANT.SE.CUTOFF <- 0.4
 
 GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results/"
@@ -36,8 +36,8 @@ fileChecks <- function(file.f, file.m, chr, field){
         return(-1)
     } 
 
-    try.f <- try(read.delim(file.f)
-    try.m <- try(read.delim(file.m)
+    try.f <- try(read.delim(file.f))
+    try.m <- try(read.delim(file.m))
     if (inherits(try.f, "try-error")){
         print(sprintf("Error loading files for c%s trait:%s - female", chr, field))
         return(-1)
@@ -49,6 +49,26 @@ fileChecks <- function(file.f, file.m, chr, field){
 
    	return(1)
 }
+
+filtUkbDat <- function(d1, d2){
+    
+    # select only the rows with the additive model
+    d1.1 <- d1[d1$TEST == "ADD",]
+    d2.1 <- d2[d2$TEST == "ADD",]
+    rownames(d1.1) <- d1.1$SNP
+    rownames(d2.1) <- d2.1$SNP
+    
+    # select rows in both and reorder based on this
+    joint.rows <- intersect(rownames(d1.1), rownames(d2.1))
+    d1.2 <- d1.1[joint.rows,]
+    d2.2 <- d2.1[joint.rows,]
+    
+    # remove NAs
+    present.rows <- c((!is.na(d1.2$SE)) & (!is.na(d2.2$SE)))
+    
+    return(list('1'=d1.2[present.rows,], '2'=d2.2[present.rows,]))
+}
+
 
 getData <- function(chr, field){
     # load data for a chromosome and a data field. 
@@ -94,7 +114,7 @@ reformatData <- function(all.dat, trait.type){
 	# check for missing files
     file.checks <- sapply(all.dat, function(x){
         ifelse (length(x) != 2, 0,
-            ifelse( (ncol(x$`1`) == 12) & (ncol(x$`2`) == 12), 1, 0))
+            ifelse( (ncol(x$`1`) > 2) & (ncol(x$`2`) > 2), 1, 0))
     })
     if (0 %in% file.checks){
         stop((paste(c("File loading issues for ", trait, ". Stopping now."), collapse="")))
@@ -112,12 +132,12 @@ reformatData <- function(all.dat, trait.type){
     }
 
     # FILTER + REFORMAT
-    filt.f <- all.dat.f[all.dat.f$SNP %in% unlist(vars.to.keep[,1]),]
-    filt.m <- all.dat.m[all.dat.m$SNP %in% unlist(vars.to.keep[,1]),]
-    return(list('1'=filt.f, '2'=filt.m))
+    dat.f <- all.dat.f[all.dat.f$SNP %in% unlist(vars.to.keep[,1]),]
+    dat.m <- all.dat.m[all.dat.m$SNP %in% unlist(vars.to.keep[,1]),]
+    return(list('1'=dat.f, '2'=dat.m))
 }
 
-filterSE <- function(filt.f, filt.m, trait.type){
+filterSE <- function(dat.f, dat.m, trait.type){
 	# filter standard error
 
 	if (trait.type == "binary"){
@@ -126,9 +146,9 @@ filterSE <- function(filt.f, filt.m, trait.type){
 	if (trait.type == "quant"){
 		cutoff <- QUANT.SE.CUTOFF
 	}
-	low.se.rows <- c((filt.f$SE < cutoff) & (filt.m$SE < cutoff))
-	filt.se.f <- filt.f[low.se.rows,]
-	filt.se.m <- filt.m[low.se.rows,]
+	low.se.rows <- c((dat.f$SE < cutoff) & (dat.m$SE < cutoff))
+	filt.se.f <- dat.f[low.se.rows,]
+	filt.se.m <- dat.m[low.se.rows,]
 	
 	return(list('1'=filt.se.f, '2'=filt.se.m))
 }
@@ -165,39 +185,7 @@ timeModel <- function(command){
 }
 
 
-testModels <- function(trait, trait.type, filt, test.type){
-	# run test models with optimizing or variational bayes
 
-    dat <- loadDat(trait, trait.type, se.filt=filt)
-
-    if (test.type == "opt"){
-
-        # run model 1 with optimizing
-        dat$dat$K <- 2
-
-        m1 <- stan_model("models/model1.stan")
-        f1 <- timeModel(optimizing(m1, dat$dat, hessian=TRUE))
-        print(f1)
-
-        dat$dat$K <- 4
-        f2 <- timeModel(optimizing(m2, dat$dat, hessian=TRUE))
-        print(f2)
-
-        save(f1, f2, file=sprintf("%s/test_opt_%s.RData", DATA.FOLDER, trait))
-
-    } 
-    if (test.type == "vb") {
-        dat$dat$K <- 2
-        f1.v <- timeModel(vb(m1, dat$dat))
-        print(f1.v)
-
-        dat$dat$K <- 4
-        f2.v <- timeModel(vb(m2, dat$dat))
-        print(f2.v)
-        save(f1.v, f2.v, file=sprintf("%s/test_vb_%s.RData", DATA.FOLDER, trait))
-
-    }
-}
 
 
 #### ----- PARAMETER EXTRACTION ----- ####
@@ -334,9 +322,7 @@ BSEplot <- function(dat) {
 }
 
 zplot <- function(dat, trait.name){
-    plot(density(rbind(dat$B[,1], dat$B[,2])/rbind(dat$SE[,1], dat$SE[,2])), main = trait.name, xlab="B/SE")
-    plot(density(dat$B[,1]/dat$SE[,1]), main = sprintf("%s - F", trait.name))
-    plot(density(dat$B[,1]/dat$SE[,1]), main = sprintf("%s - M", trait.name))
-
+    plot(density(dat$B[,2]/dat$SE[,2]), col='blue', main = trait.name, xlab="B/SE")
+    lines(density(dat$B[,1]/dat$SE[,1]), col='red')
 }
 
