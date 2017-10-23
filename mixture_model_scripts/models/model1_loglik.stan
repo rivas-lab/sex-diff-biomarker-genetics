@@ -52,6 +52,9 @@ model {
 generated quantities {
     vector[K] ps;
     vector[N] log_lik;
+    matrix[M,M] Omegacor;
+
+    Omegacor = multiply_lower_tri_self_transpose(L_Omega);
     
     for (n in 1:N){
         for (k in 1:K){

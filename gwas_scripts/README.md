@@ -23,6 +23,8 @@ Then, to run GWAS:
 
 ```This runs the script gwas_qt_sex_div.sh```
 
+UPDATED
+```sbatch --array=1-22 submit_gwas_run.sh <sex> <phe>```
 
 
 Binary phenotypes

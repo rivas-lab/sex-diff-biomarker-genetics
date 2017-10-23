@@ -9,8 +9,9 @@
 
 SEX=$1
 
-PHE_ID='21001'
-PHE_FILE='/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phefiles/21001.phe'
+PHE_ID=$2
+#PHE_ID='21001'
+PHE_FILE='/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phefiles/'${PHE_ID}'.phe'
 
 CHR=$SLURM_ARRAY_TASK_ID
 

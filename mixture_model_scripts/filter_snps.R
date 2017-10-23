@@ -13,9 +13,12 @@ filt.file <- read.delim(sprintf("%s/variant_filter_table.tsv.gz", FILTER_DIR))
 #head(filt.file[,c(1:12,14:30)])
 
 #should only include those with all_filters=0
+# all filters imposes MAF of 1%, HWE < 1*10^-7, MCPI pass (if looked at)
 rem.snps <- filt.file[filt.file$all_filters==0,] # 655,654 out of 784,256
 
 # filter for ld - part of LD-pruned set
 rem.snps2 <- rem.snps[rem.snps$ld_indep=='True',] # 361,424
+
+write.table(rem.snps2, sprintf("%s/snp_filt_metadata.txt", OUT_DIR))
 
 write.table(rem.snps2$ID, sprintf("%s/snp_filt_list.txt", OUT_DIR), col.names=FALSE, row.names=FALSE, quote=FALSE)

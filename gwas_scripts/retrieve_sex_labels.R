@@ -22,10 +22,12 @@ cov_mat_filt <- cov_mat_sm[!(cov_mat_sm$IID %in% ids.to.remove),]
 
 # zerosex
 zeros <- cov_mat_filt[cov_mat_filt$sex==0,]
+zeros <- zeros[zeros$IID > 0, ] ### remove negative IIDs
 write.table(zeros$IID, file=sprintf("%s/zerosex.keep", PHE_OUT_DIR), col.names=FALSE, row.names=FALSE, quote=FALSE)	
 
 # onesex 
 ones <- cov_mat_filt[cov_mat_filt$sex==1,]
+ones <- ones[ones$IID > 0,] ### remove negative IIDs
 write.table(ones$IID, file=sprintf("%s/onesex.keep", PHE_OUT_DIR), col.names=FALSE, row.names=FALSE, quote=FALSE)	
 
 

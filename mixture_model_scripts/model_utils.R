@@ -109,7 +109,14 @@ getDataBin <- function(chr, field){
     return(filt.dat)
 }
 
-reformatData <- function(all.dat, trait.type){
+
+filterMAF <- function(maf.cutoff){
+    rem.snps <- read.table(sprintf("%s/snp_filt_metadata.txt", DATA.FOLDER), header=TRUE)
+    filt.snps <- rem.snps[rem.snps$maf > maf.cutoff,]
+    return(filt.snps$ID)
+}
+
+reformatData <- function(all.dat, trait.type, maf.cutoff=0.01){
 	
 	# check for missing files
     file.checks <- sapply(all.dat, function(x){
@@ -132,20 +139,33 @@ reformatData <- function(all.dat, trait.type){
     }
 
     # FILTER + REFORMAT
-    dat.f <- all.dat.f[all.dat.f$SNP %in% unlist(vars.to.keep[,1]),]
-    dat.m <- all.dat.m[all.dat.m$SNP %in% unlist(vars.to.keep[,1]),]
+    if (maf.cutoff==0.01){
+        snps.to.keep <- unlist(vars.to.keep[,1])
+
+    } else { # if a non-default MAF is provided, filter by this
+        snps.to.keep <- filterMAF(maf.cutoff)
+    }
+    dat.f <- all.dat.f[all.dat.f$SNP %in% snps.to.keep,]
+    dat.m <- all.dat.m[all.dat.m$SNP %in% snps.to.keep,]        
+
     return(list('1'=dat.f, '2'=dat.m))
 }
 
-filterSE <- function(dat.f, dat.m, trait.type){
+
+
+filterSE <- function(dat.f, dat.m, trait.type, cutoff='default'){
 	# filter standard error
 
-	if (trait.type == "binary"){
-		cutoff <- BINARY.SE.CUTOFF
-	} 
-	if (trait.type == "quant"){
-		cutoff <- QUANT.SE.CUTOFF
-	}
+    if (cutoff=='default'){
+        if (trait.type == "binary"){
+            cutoff <- BINARY.SE.CUTOFF
+        } 
+        if (trait.type == "quant"){
+            cutoff <- QUANT.SE.CUTOFF
+        }        
+    } # otherwise keep the provided cutoff
+
+
 	low.se.rows <- c((dat.f$SE < cutoff) & (dat.m$SE < cutoff))
 	filt.se.f <- dat.f[low.se.rows,]
 	filt.se.m <- dat.m[low.se.rows,]
