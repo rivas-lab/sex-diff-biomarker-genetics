@@ -1,0 +1,363 @@
+# BIODS215 Project Utils
+# Emily Flynn
+# 6/7/2017
+#
+# Functions for prepping data to run models, run simulations, and process model output.
+
+
+require('MASS')
+require('Matrix')
+require('mnormt')
+
+### ----- MODEL 1 ----- ###
+
+# extract Sigma, pi
+getSigma <- function(fit){
+    fit_summ_S <- summary(fit, pars=c("Sigma"), probs=c(0.05, 0.95))
+    Sigma <- matrix(fit_summ_S$summary[,c("mean")], 2, 2)
+    return(Sigma)
+}
+
+getPi <- function(fit){
+    fit_summ_pi <- summary(fit, pars=c("pi"), probs=c(0.05, 0.95))
+    p <- as.vector(fit_summ_pi$summary[,c("mean")])
+    return(p)
+}
+
+# compute genetic correlation
+getRg <- function(S){
+    rg <- cov2cor(S)
+    return(rg[1,2])
+}
+
+
+
+## LRT test for fit of model 1 
+
+computeLikelihood<- function(B, SE, p, Sigma){
+    zeros <- c(0,0)
+    SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
+    p_1 = p[1]*pmnorm(B, zeros, SE_mat)
+    p_2 = p[2]*pmnorm(B, zeros, SE_mat + Sigma)
+    l = log(p_1) + log(p_2)
+    return(l)
+}
+
+computeNullLikelihood<- function(B, SE){
+    zeros <- c(0,0)
+    SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
+    p_1 = pmnorm(B, zeros, SE_mat)  
+    l = log(p_1) 
+    return(l)
+}
+
+lrt <- function(cov_dat, fit){
+    B_dat <- cov_dat$B
+    SE_dat <- cov_dat$SE
+    N <- cov_dat$N
+    Sigma <- getSigma(fit)
+    p <- getPi(fit)
+
+    l.m <- sum(sapply(1:N, function(i) computeLikelihood(B_dat[i,], SE_dat[i,], p, Sigma)))
+    l.n <- sum(sapply(1:N, function(i) computeNullLikelihood(B_dat[i,], SE_dat[i,])))
+    return(2*(l.m-l.n)) # updated!
+}
+
+
+
+## Estimate SNP-level heritabilities 
+
+getH <- function(B, SE, p, Sigma){
+    zeros <-c(0,0)
+    SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
+    p_1 = p[1]*pmnorm(B, zeros, SE_mat)
+    p_2 = p[2]*pmnorm(B, zeros, SE_mat + Sigma)
+    prob_1 = p_1 / (p_1 + p_2)
+    prob_2 = p_2 / (p_1 + p_2)
+    category <- rbinom(1, 1, prob=prob_2) 
+    if (category == 1){
+        h_f <- Sigma[1,1] / (Sigma[1,1] + SE[1])
+        h_m <- Sigma[2,2] / (Sigma[2,2] + SE[2])
+        return(c(h_f, h_m))
+    } else {
+        return(c(NA,NA))
+    }    
+}
+
+getPlotHeritabilities <- function(cov_dat, fit, type){
+    B_dat <- cov_dat$B
+    SE_dat <- cov_dat$SE
+    N <- cov_dat$N
+    Sigma <- getSigma(fit)
+    p <- getPi(fit)
+    hx <- sapply(1:N, function(i) getH(B_dat[i,], SE_dat[i,], p, Sigma))
+
+    plot(hx[1,] ~ hx[2,], ylab="h_f", xlab="h_m", 
+         main=paste("SNP-level heritabilities (", type, ")", sep=""), col="darkblue")
+    lines(x=seq(0,1), y=seq(0,1), add=TRUE)
+    return(hx)
+}
+
+
+
+### ----- MODEL 1 ----- ###
+
+# get variances
+getVars <- function(fit){
+    fitS <- summary(fit, pars=c("sigmasq"), probs=c(0.05, 0.95))
+
+    sigmasq <- as.vector(fitS$summary[,c("mean")])
+    return(sigmasq)
+}
+
+## Assign sample to a category based on estimated params
+
+getCat <- function(B, SE, p, sigmasq){
+
+    zeros <- c(0,0)
+    SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
+
+    p_1 = p[1]*pmnorm(B, zeros, SE_mat)
+    p_2 = p[2]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[1], 0, 0, 0),2, 2))
+    p_3 = p[3]*pmnorm(B, zeros, SE_mat + matrix(c(0, 0, 0, sigmasq[2]),2,2))
+    p_4 = p[4]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[3], 0, 0, sigmasq[4]), 2,2))
+    p_tot = p_1 + p_2+ p_3 + p_4
+    prob_1 = p_1 / p_tot
+    prob_2 = p_2 / p_tot
+    prob_3 = p_3 / p_tot
+    prob_4 = p_4 / p_tot
+    cats <- rmultinom(1, 1, c(prob_1, prob_2, prob_3, prob_4)) 
+    category <- which(cats == 1)
+    return(category)
+}
+
+
+getAllCats <- function(cov.dat, fit){
+    B.dat <- cov.dat$B
+    SE.dat <- cov.dat$SE
+    N <- cov.dat$N
+    sigmasq <- getVars(fit)
+    p <- getPi(fit) # model 1 code
+    
+    categories <- sapply(1:N, function(i) getCat(B.dat[i,], SE.dat[i,], p, sigmasq))
+    return(categories)
+}
+
+                             
+## Write out sex-specific SNP tables                             
+sexSpecSNPtables <- function(dat, df.f, df.m, categories){
+    f.specific <- dat$snp[which(categories==2)]
+    m.specific <- dat$snp[which(categories==3)]
+
+    if (length(m.specific) > 0){
+        m.snps <- cbind(df.f[df.f$SNP %in% m.specific ,c("SNP", "CHR", "BETA","SE", "P")], 
+         df.m[df.m$SNP %in% m.specific,c("BETA","SE", "P")])
+        colnames(m.snps) <- c("snp", "chr", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
+        m.snps.df <- m.snps[,c("snp", "chr", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")]        
+    } else {
+        m.snps.df <- ""
+    }
+    if (length(f.specific) > 0){
+        f.snps <- cbind(df.f[df.f$SNP %in% f.specific,c("SNP", "CHR", "BETA","SE", "P")], 
+          df.m[df.m$SNP %in% f.specific,c("BETA","SE", "P")])
+        colnames(f.snps) <- c("snp", "chr", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
+        f.snps.df <- f.snps[,c("snp", "chr", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")]        
+    } else {
+        f.snps.df <- ""
+    }
+
+    return(list('1'=f.snps.df, '2'=m.snps.df))
+    
+}                           
+
+
+### ---- SIMULATIONS ---- ###
+
+simSE2 <- function(N){
+    
+    #### SAMPLE STANDARD ERRORS from a half-normal distribution
+    # parameters were selected to approximate true distribution of standard errors in the data
+    se <- sapply(rnorm(N*5, 0.01, 0.02), abs)
+    filt.se <- se[se <0.4 & se > 0.005]
+    se2 <- sapply(filt.se, function(x) x^2)
+    return(se2)
+}
+
+model1Sim <- function(N, p, S){
+       
+    zeros <- c(0,0) 
+    Sigma <- nearPD(S)$mat # nearest positive definite matrix
+    print(Sigma)
+       
+    # sample squared SEs    
+    se2 <- simSE2(N)
+    
+    ### SAMPLE BETAS FOR EACH MODEL
+    # M0
+    n.m0 <- floor(p[1]*N)
+    se.m0 <- matrix(se2[1:(2*n.m0)], n.m0, 2)
+    betas.m0 <- do.call(rbind, lapply(1:n.m0, function(x) mvrnorm(1, zeros, diag(se.m0[x,]))))
+
+    # M1 
+    n.m1 <- N - n.m0
+    se.m1 <- matrix(se2[(2*n.m0+1):(2*N)], n.m1, 2)
+    betas.m1 <- do.call(rbind, lapply(1:n.m1, function(x) mvrnorm(1, zeros, diag(se.m1[x,])+Sigma)))
+
+    # put together
+    betas <- rbind(betas.m0, betas.m1)
+    ses <- rbind(se.m0, se.m1)
+
+    cov.data.sim <- list(
+        N = N,
+        M = 2,
+        B = betas,
+        SE = ses,
+        K = 2
+    )  
+    return(cov.data.sim)
+}
+
+model2Sim <- function(N, p, sigmasq){
+    # sigmasq are a vector of four variances
+    
+    zeros <- c(0,0)
+    
+    # sample squared SEs
+    se2 <- simSE2(N)
+
+    ### SAMPLE BETAS
+    # M0
+    n.m0 <- round(p[1]*N)
+    se.m0 <- matrix(se2[1:(2*n.m0)], n.m0, 2)
+    betas.m0 <- do.call(rbind, lapply(1:n.m0, function(x) mvrnorm(1, zeros, diag(se.m0[x,]))))
+
+    # M1 
+    n.m1 <- round(p[2]*N)
+    se.m1 <- matrix(se2[(2*n.m0+1):(2*(n.m0+n.m1))], n.m1, 2)
+    betas.m1 <- do.call(rbind, lapply(1:n.m1, function(x) 
+        mvrnorm(1, zeros, diag(se.m1[x,])+diag(c(sigmasq[1], 0)))))
+
+    # M2
+    n.m2 <- round(p[3]*N)    
+    se.m2 <- matrix(se2[(2*(n.m0+n.m1)+1):(2*(n.m0+n.m1+n.m2))], n.m2, 2)
+    betas.m2 <- do.call(rbind, lapply(1:n.m2, function(x) 
+        mvrnorm(1, zeros, diag(se.m2[x,])+diag(c(0,sigmasq[2])))))
+
+    # M3
+    n.m3 <- N-(n.m0+n.m1 + n.m2)
+    se.m3 <- matrix(se2[(2*(n.m0+n.m1+n.m2)+1):(2*N)], n.m3, 2)
+    betas.m3 <- do.call(rbind, lapply(1:n.m3, function(x) 
+        mvrnorm(1, zeros, diag(se.m3[x,])+diag(c(sigmasq[3],sigmasq[4])))))
+
+
+    # put together
+    betas <- do.call(rbind, list(betas.m0, betas.m1, betas.m2, betas.m3))
+    ses <- do.call(rbind, list(se.m0, se.m1, se.m2, se.m3))
+        
+    cov.data.k4.sim <- list(
+        N = N,
+        M = 2,
+        B = betas,
+        SE = ses,
+        K = 4
+    )
+    return(cov.data.k4.sim)
+}                                                 
+
+### DATA PROCESSING
+
+
+# filter data
+filtUkbDat <- function(d1, d2){
+    
+    # select only the rows with the additive model
+    d1.1 <- d1[d1$TEST == "ADD",]
+    d2.1 <- d2[d2$TEST == "ADD",]
+    rownames(d1.1) <- d1.1$SNP
+    rownames(d2.1) <- d2.1$SNP
+    
+    # select rows in both and reorder based on this
+    joint.rows <- intersect(rownames(d1.1), rownames(d2.1))
+    d1.2 <- d1.1[joint.rows,]
+    d2.2 <- d2.1[joint.rows,]
+    
+    # remove NAs
+    present.rows <- c((!is.na(d1.2$SE)) & (!is.na(d2.2$SE)))
+    
+    return(list('1'=d1.2[present.rows,], '2'=d2.2[present.rows,]))
+}
+
+
+getData <- function(chr, field){
+    # load data for a chromosome and a data field. 
+    prefix <- paste("/scratch/users/erflynn/biods_data/biods215.github.io/ProjectData/mfgenetics/c", chr, ".", field, sep="")
+    file.f <- paste(prefix, ".zerosex.coding.ff.all.initialdata.PHENO1.glm.linear", sep="")
+    file.m <- paste(prefix, ".onesex.coding.ff.all.initialdata.PHENO1.glm.linear", sep="")
+    my.classes = c("numeric", "numeric", "character", "factor", "factor", "character",
+                   "numeric", "numeric", "numeric", "numeric", "numeric")
+    dat.f <- read.delim(file.f, colClasses=my.classes)
+    dat.m <- read.delim(file.m, colClasses=my.classes)
+    filt.dat <- filtUkbDat(dat.f, dat.m)
+    return(filt.dat)
+}
+
+filterSE <- function(all.dat){
+    
+    # relabel some columns
+    all.dat.f <- do.call(rbind, lapply(all.dat, function(x) x$`1`))
+    colnames(all.dat.f)[1:3] <- c("CHR", "BP", "SNP")
+    all.dat.m <- do.call(rbind, lapply(all.dat, function(x) x$`2`))
+    colnames(all.dat.m)[1:3] <- c("CHR", "BP", "SNP")
+
+    # FILTER OUT STANDARD ERROR > 0.4 
+    low.se.rows <- c((all.dat.f$SE < 0.4) & (all.dat.m$SE < 0.4))
+    filt.se.f <- all.dat.f[low.se.rows,]
+    filt.se.m <- all.dat.m[low.se.rows,]
+    return(list("1"=filt.se.f, "2"=filt.se.m))
+}
+
+topPsample <- function(dat, cutoff.p=10**(-5), frac.top, K=2){
+    # get the top p-value data
+    # then sample the rest of the data
+    # frac.top = fraction of top data
+    
+    dat.f <- dat$`1`
+    dat.m <- dat$`2`
+    topP.m <- dat.f[dat.f$P < cutoff.p,]
+    topP.f <- dat.m[dat.m$P < cutoff.p,]
+    top.snps <- union(topP.m$SNP, topP.f$SNP)
+    print(length(top.snps))
+
+    # top rows
+    top.rows <- (dat.f$SNP %in% top.snps)
+    top.f <- dat.f[top.rows,]
+    top.m <- dat.m[top.rows,]
+
+    # other rows
+    other.f <- dat.f[-top.rows,]
+    other.m <- dat.m[-top.rows,]  
+    
+    # compute how many more 
+    num.rem <- ((1-frac.top)/frac.top) *length(top.snps)
+    
+    # randomly sample remaining percentage
+    other.ind <- sample(1:nrow(other.f), num.rem, replace=FALSE)
+    sampled.f <- rbind(top.f, other.f[other.ind,])
+    sampled.m <- rbind(top.m, other.m[other.ind,])
+    
+    # put together betas and ses, sq se for SE matrix
+    betas <- cbind(sampled.f$BETA, sampled.m$BETA)
+    ses <- cbind(sampled.f$SE, sampled.m$SE)
+    se2 <- apply(ses, c(1,2), function(x) x^2)
+
+    cov.data <- list(
+        N = nrow(betas),
+        M = 2,
+        B = betas,
+        SE = se2,
+        K = K
+    )
+    snps <- sapply(sampled.f$SNP, as.character)
+    return(list("dat"=cov.data, "snp"=snps))
+}
+
