@@ -24,7 +24,7 @@ DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 args = commandArgs(trailingOnly=TRUE) # 1, 2, or 3 (2-alt)
 
 model <- as.numeric(args[1])
-if (!model %in% c(1,2,3)){ stop ("please specify a model (1,2,or 3) for the first argument") }
+#if (!model %in% c(1,2,3)){ stop ("please specify a model (1,2,or 3) for the first argument") }
 
 
 trait <- args[2]
@@ -33,10 +33,15 @@ if (!trait.type %in% c('binary', 'quant')){ stop ("please specify the type of tr
 
 
 filt <- ifelse(length(args)>3 & args[4] == "FALSE", FALSE, TRUE) # whether to filter, optional (default TRUE)
-test.type <- ifelse(length(args) == 5, args[5], NA) # parse test type ('vb' or 'opt'), optional
+test.type <- ifelse(length(args) >= 5, args[5], NA) # parse test type ('vb' or 'opt'), optional
 
+#maf.idx <- as.numeric(ifelse(length(args)==6, args[6], 1))
+maf.cutoff <- 0.01
+se.cutoff <- 0.4 #0.2
 
-loadDat <- function(trait, trait.type, se.filt=FALSE){
+print(trait)
+
+loadDat <- function(trait, trait.type, maf.cutoff=0.01, se.filt=FALSE, se.cutoff=0.4){
 	# function for loading the data
 
 	# load all the data
@@ -44,17 +49,17 @@ loadDat <- function(trait, trait.type, se.filt=FALSE){
 		all.dat <- lapply(1:22, function(x){ getDataBin(as.character(x), trait)})
 	} 
 	if (trait.type == 'quant') {
-		all.dat <- lapply(1:22, function(x){ getData(as.character(x), trait)})
+		all.dat <- lapply(1:22, function(x){ getDataQuant(as.character(x), trait)})
 	}
 
 	# reformat data, remove rows that are not shared
-    dat.reform <- reformatData(all.dat, trait.type)
+    dat.reform <- reformatData(all.dat, trait.type, maf.cutoff)
     filt.f <- dat.reform$`1`
     filt.m <- dat.reform$`2`
 
     # filter by standard error
     if (se.filt==TRUE){
-        dat.filt <- filterSE(filt.f, filt.m, trait.type)
+        dat.filt <- filterSE(filt.f, filt.m, trait.type, cutoff=se.cutoff)
         filt.f <- dat.filt$`1`
         filt.m <- dat.filt$`2`
     }
@@ -66,23 +71,26 @@ loadDat <- function(trait, trait.type, se.filt=FALSE){
 }
 
 
-runM1 <- function(trait, trait.type, filt=FALSE){
+runM1 <- function(trait, trait.type, maf.cutoff=0.01, filt=FALSE, se.cutoff=0.4){
 	# run model 1 for a specified trait
 
-    dat <- loadDat(trait, trait.type, se.filt=filt)
+    print(maf.cutoff)
+    
+    dat <- loadDat(trait, trait.type, maf.cutoff, filt, se.cutoff)
     dat$dat$K <- 2
-    fit1 <- stan(file = "models/model1_loglik.stan",  
+    print("training")
+    fit1 <- stan(file = "models/model1_log_mix.stan",  
             data = dat$dat,    
             chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
-   
+    print("SAVING")
     print(fit1, pars=c("Sigma", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
-    save(dat, fit1, file=paste(c(DATA.FOLDER, "f_m1_", trait, ".RData"), collapse=""))
+    save(dat, fit1, file=paste(c(DATA.FOLDER, "f_m1_", trait,"_m", maf.cutoff, "_s", se.cutoff, ".RData"), collapse=""))
 }
 
-runM2 <- function(trait, trait.type, filt=FALSE){
+runM2 <- function(trait, trait.type, maf.cutoff=0.01, filt=FALSE, se.cutoff=0.4){
 	# run model 2 for a specified trait
 
-    dat <- loadDat(trait, trait.type, se.filt=filt)
+    dat <- loadDat(trait, trait.type, maf.cutoff, filt, se.cutoff)
     dat$dat$K <- 4
 
     fit2 <- stan(file = "models/model2_loglik.stan",  
@@ -90,21 +98,21 @@ runM2 <- function(trait, trait.type, filt=FALSE){
             chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
   
     print(fit2, pars=c("sigmasq", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
-
+    print("SAVING")
     save(dat, fit2, file=paste(c(DATA.FOLDER, "f_m2_", trait, ".RData"), collapse=""))
 }
 
-runM2.a <- function(trait, trait.type, filt=FALSE){
+runM2.a <- function(trait, trait.type, maf.cutoff=0.01, filt=FALSE, se.cutoff=0.4){
 	# run alternative model for model 2 
     
-    dat <- loadDat(trait, trait.type, se.filt=filt)
+    dat <- loadDat(trait, trait.type, maf.cutoff, filt, se.cutoff)
     dat$dat$K <- 2
     fit2 <- stan(file = "models/model2_alt_loglik.stan",  
             data = dat$dat,    
             chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
- 
-    print(fit2, pars=c("sigmasq", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
 
+    print(fit2, pars=c("sigmasq", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
+    print("SAVING")
     save(dat, fit2, file=paste(c(DATA.FOLDER, "f_m2.a_", trait, ".RData"), collapse=""))
 }
 
@@ -158,13 +166,13 @@ if (!is.na(test.type)){
     # run models 
     if (model==1){
         print("running M1")
-        runM1(trait, trait.type, filt)
+        runM1(trait, trait.type, maf.cutoff, filt, se.cutoff)
     }
     if (model==2){
-        runM2(trait, trait.type, filt)
+        runM2(trait, trait.type, maf.cutoff, filt, se.cutoff)
     }
     if (model==3){
-        runM2.a(trait, trait.type, filt)
+        runM2.a(trait, trait.type, maf.cutoff, filt, se.cutoff)
     }
 
 }

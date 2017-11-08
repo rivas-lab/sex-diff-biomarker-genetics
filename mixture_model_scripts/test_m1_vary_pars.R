@@ -40,14 +40,16 @@ testPars <- function(all.dat, trait, trait.type, maf.cut, se.cut){
 	dat$dat$K <- 2
 
 	m1 <- stan_model("models/model1_loglik.stan")
-	f1 <- timeModel(optimizing(m1, dat$dat, hessian=TRUE))
+	f1 <- timeModel(vb(m1, dat$dat))#, hessian=TRUE))
 	print(f1)
 
-	save(dat, f1, file=sprintf("%s/test_pars/testv_%s_m%s_s%s.RData", DATA.FOLDER, trait, maf.cut, se.cut))
+	save(dat, f1, file=sprintf("%s/test_pars/test_vb_%s_m%s_s%s.RData", DATA.FOLDER, trait, maf.cut, se.cut))
 }
 
-maf.range <- c(0.01, 0.02, 0.03, 0.05, 0.07, 0.10)
-se.range <- c(0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4)
+#maf.range <- c(0.01, 0.02, 0.03, 0.05, 0.07, 0.10)
+                                        #se.range <- c(0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4)
+maf.range <- c(0.01, 0.05, 0.10)
+se.range <- c(0.2)
 for (i in maf.range){
 	for (j in se.range){
 		print(sprintf("Looking at MAF: %s SE: %s", i, j))

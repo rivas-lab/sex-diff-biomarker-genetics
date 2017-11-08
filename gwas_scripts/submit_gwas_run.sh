@@ -10,7 +10,6 @@
 SEX=$1
 
 PHE_ID=$2
-#PHE_ID='21001'
 PHE_FILE='/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phefiles/'${PHE_ID}'.phe'
 
 CHR=$SLURM_ARRAY_TASK_ID
@@ -20,7 +19,7 @@ export PATH=/oak/stanford/groups/mrivas/software/plink2/20170904/:$PATH
 export PATH=$PATH:$HOME/applications/htslib-1.5/installation/bin
 source activate root # loads my root env for pandas
 
-./gwas_qt_sex_div.sh 24893 $SEX $PHE_ID $PHE_FILE $CHR
+./gwas_qt_sex_div_no_na.sh 24893 $SEX $PHE_ID $PHE_FILE $CHR
 
 
 

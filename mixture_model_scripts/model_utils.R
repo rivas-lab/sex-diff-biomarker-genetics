@@ -12,7 +12,7 @@ require('qqman')
 require('rstan')
 
 # hard-coded cutoffs, we can adjust
-BINARY.SE.CUTOFF <- 2 ## might want to adjust
+BINARY.SE.CUTOFF <- 1 ## might want to adjust
 QUANT.SE.CUTOFF <- 0.4
 
 GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results/"
@@ -36,8 +36,8 @@ fileChecks <- function(file.f, file.m, chr, field){
         return(-1)
     } 
 
-    try.f <- try(read.delim(file.f))
-    try.m <- try(read.delim(file.m))
+    try.f <- try(read.table(file.f))
+    try.m <- try(read.table(file.m))
     if (inherits(try.f, "try-error")){
         print(sprintf("Error loading files for c%s trait:%s - female", chr, field))
         return(-1)
@@ -70,20 +70,25 @@ filtUkbDat <- function(d1, d2){
 }
 
 
-getData <- function(chr, field){
-    # load data for a chromosome and a data field. 
+getDataQuant <- function(chr, field){
+    # load data for a chromosome and a data field,
     prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
     file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
     file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
 
-    my.classes = c("numeric", "numeric", "character", "factor", "factor", "character",
+    my.classes = c("numeric", "numeric", "character", "character","character", "character",
                    "numeric", "numeric", "numeric", "numeric", "numeric")
+
+    col.labels <- c("CHROM", "POS", "ID", "REF", "ALT1", "TEST", "OBS_CT", 
+        "BETA", "SE", "T_STAT", "P")
 
     checks <- fileChecks(file.f, file.m, chr, field)
     if (checks == -1){ return(NA) }
     
-    dat.f <- read.delim(file.f, colClasses=my.classes)
-    dat.m <- read.delim(file.m, colClasses=my.classes)
+    dat.f <- read.table(file.f, colClasses=my.classes, header=FALSE)
+    dat.m <- read.table(file.m, colClasses=my.classes, header=FALSE)
+    colnames(dat.f) <- col.labels
+    colnames(dat.m) <- col.labels
     filt.dat <- filtUkbDat(dat.f, dat.m)
     return(filt.dat)
 }
@@ -99,11 +104,16 @@ getDataBin <- function(chr, field){
     my.classes = c("numeric", "numeric", "character", "factor", "factor", "factor", "character",
                    "numeric", "numeric", "numeric", "numeric", "numeric") # this is diff from quant
 
+    col.labels <- c("CHROM", "POS", "ID", "REF", "ALT", "FIRTH?", "TEST", "OBS_CT", 
+        "OR", "SE", "T_STAT", "P")
+
     checks <- fileChecks(file.f, file.m, chr, field)
     if (checks == -1){ return(NA) }
 
-    dat.f <- read.delim(file.f,  colClasses=my.classes)
-    dat.m <- read.delim(file.m, colClasses=my.classes)
+    dat.f <- read.table(file.f,  colClasses=my.classes)
+    dat.m <- read.table(file.m, colClasses=my.classes)
+    colnames(dat.f) <- col.labels
+    colnames(dat.m) <- col.labels
 
     filt.dat <- filtUkbDat(dat.f, dat.m)
     return(filt.dat)
@@ -226,11 +236,19 @@ getPi <- function(fit){
 }
 
 # compute genetic correlation
-getRg <- function(S){
-    rg <- cov2cor(S)
+getRg <- function(fit){
+    #rg <- cov2cor(S)
+    #return(rg[1,2])
+    fit_summ_R <- summary(fit, pars=c("Omegacor"), probs=c(0.05, 0.95))
+    rg <- matrix(fit_summ_R$summary[,c("mean")], 2, 2)
     return(rg[1,2])
 }
 
+
+getRgConf <- function(fit){ # 95% confidence interval
+    fit_summ_R <- summary(fit, pars=c("Omegacor"), probs=c(0.025, 0.975))
+    return(fit_summ_R$summary["Omegacor[1,2]",c("2.5%", "97.5%")])
+}
 
 
 
