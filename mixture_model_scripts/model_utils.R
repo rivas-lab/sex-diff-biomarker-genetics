@@ -76,7 +76,7 @@ getDataQuant <- function(chr, field){
     file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
     file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
 
-    my.classes = c("numeric", "numeric", "character", "character","character", "character",
+    my.classes = c("character", "numeric", "character", "character","character", "character",
                    "numeric", "numeric", "numeric", "numeric", "numeric")
 
     col.labels <- c("CHROM", "POS", "ID", "REF", "ALT1", "TEST", "OBS_CT", 
@@ -101,7 +101,7 @@ getDataBin <- function(chr, field){
     file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.logistic.hybrid.gz"), collapse="")
     file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.logistic.hybrid.gz"), collapse="")
 
-    my.classes = c("numeric", "numeric", "character", "factor", "factor", "factor", "character",
+    my.classes = c("character", "numeric", "character", "factor", "factor", "factor", "character",
                    "numeric", "numeric", "numeric", "numeric", "numeric") # this is diff from quant
 
     col.labels <- c("CHROM", "POS", "ID", "REF", "ALT", "FIRTH?", "TEST", "OBS_CT", 
@@ -120,27 +120,34 @@ getDataBin <- function(chr, field){
 }
 
 
+
 filterMAF <- function(maf.cutoff){
     rem.snps <- read.table(sprintf("%s/snp_filt_metadata.txt", DATA.FOLDER), header=TRUE)
-    filt.snps <- rem.snps[rem.snps$maf > maf.cutoff,]
-    return(filt.snps$ID)
+    filt.snps <- sapply(rem.snps[rem.snps$maf >=maf.cutoff,]$ID, as.character)
+
+    # load other SNPs filtering data - X, XY, Y, MT
+    alt_chr <- read.table(sprintf("%s/chr_qc/alt_chr_qc_table.txt", DATA.FOLDER), header=TRUE)
+    filt.snps2 <- sapply(alt_chr[(alt_chr$keep==1 & alt_chr$MAF >=maf.cutoff),]$SNP, as.character)
+
+    filt.snps.full <- c(filt.snps, filt.snps2)
+    return(filt.snps.full)
 }
 
 reformatData <- function(all.dat, trait.type, maf.cutoff=0.01){
 	
-	# check for missing files
-    file.checks <- sapply(all.dat, function(x){
-        ifelse (length(x) != 2, 0,
-            ifelse( (ncol(x$`1`) > 2) & (ncol(x$`2`) > 2), 1, 0))
-    })
-    if (0 %in% file.checks){
-        stop((paste(c("File loading issues for ", trait, ". Stopping now."), collapse="")))
-	}
+
+
+    # deal with single chromosome - ex. just X
+    if (length(all.dat)==1){
+        all.dat.f <- data.frame(all.dat[[1]][[1]])
+        all.dat.m <- data.frame(all.dat[[1]][[2]])
+    } else {
+        all.dat.f <- do.call(rbind, lapply(all.dat, function(x) x$`1`))
+        all.dat.m <- do.call(rbind, lapply(all.dat, function(x) x$`2`))        
+    }
 
     # relabel some columns
-    all.dat.f <- do.call(rbind, lapply(all.dat, function(x) x$`1`))
     colnames(all.dat.f)[1:3] <- c("CHR", "BP", "SNP")
-    all.dat.m <- do.call(rbind, lapply(all.dat, function(x) x$`2`))
     colnames(all.dat.m)[1:3] <- c("CHR", "BP", "SNP")
 
     if (trait.type == "binary"){
@@ -148,13 +155,10 @@ reformatData <- function(all.dat, trait.type, maf.cutoff=0.01){
     	all.dat.m$BETA <- log(all.dat.m$OR)    	
     }
 
-    # FILTER + REFORMAT
-    if (maf.cutoff==0.01){
-        snps.to.keep <- unlist(vars.to.keep[,1])
+    # filter by MAF
+    snps.to.keep <- filterMAF(maf.cutoff)
 
-    } else { # if a non-default MAF is provided, filter by this
-        snps.to.keep <- filterMAF(maf.cutoff)
-    }
+    
     dat.f <- all.dat.f[all.dat.f$SNP %in% snps.to.keep,]
     dat.m <- all.dat.m[all.dat.m$SNP %in% snps.to.keep,]        
 
@@ -198,7 +202,8 @@ extractDataStan <- function(filt.f, filt.m){
         K = 2
     )
     snps <- sapply(filt.f$SNP, as.character)
-    dat <- list("dat"=cov.data, "snp"=snps)
+    chr <- sapply(filt.f$CHR, as.character)
+    dat <- list("dat"=cov.data, "snp"=snps, "chr"=chr)
     return(dat)
 }
 

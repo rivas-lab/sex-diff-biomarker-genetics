@@ -1,12 +1,13 @@
 #!/bin/bash
 #
 # Original script: Yosuke, Matt
-# Updated by E Flynn to analyze sex-divided data
+# Updated by E Flynn to analyze sex-divided data 
 #   Changes:
 #    - using input param 2 for sex 
 #    - using a "sex_ids.keep" file of IDs to keep, this has 151k individuals removed and contains only IDs for samples from one sex 
 #    - removed sex as a covariate from list of covariate names
 #    - updated file labeling to include sex label
+#    - updated to work for X chromosome, which does not have any no-array SNPs. 
 #
 set -beEu -o pipefail
 
@@ -18,7 +19,7 @@ if [ $# -lt 7 ] ; then threads=8 ; else threads=$7 ; fi
 UKB_app_id=$1
 
 target=/oak/stanford/groups/mrivas/ukbb/24983
-outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results2
+outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results_test
 if [ ! -d $outDir ] ; then mkdir -p $outDir ; fi
 
 # which sex to analyzeoo
@@ -86,35 +87,50 @@ if [ ! -f ${out}.${out_suffix%.gz.tbi} ] ; then
 		--pheno-quantile-normalize
 fi
 
+echo "GWAS run #1"
+
 # PLINK without Array
 if [ ! -f ${out}_noarray.${out_suffix%.gz.tbi} ] ; then
-	echo "[$0 $(date +%Y%m%d-%H%M%S)] Running GWAS (no array) with plink2" >&2
-	plink2 --memory $memory --threads $threads \
-		--bed $bed --bim $bim --fam $fam \
-		--keep $sex_ids \
-		--extract $navars \
-		--out ${out}_noarray \
-		--pheno $phenofile \
-		--covar $covar --covar-name age PC1 PC2 PC3 PC4 \
-		--glm \
-		--pheno-quantile-normalize 
+	echo "Checking chromosome"
+	if [[ ! $N == "X" ]]; then 
+		echo "[$0 $(date +%Y%m%d-%H%M%S)] Running GWAS (no array) with plink2" >&2
+		plink2 --memory $memory --threads $threads \
+			--bed $bed --bim $bim --fam $fam \
+			--keep $sex_ids \
+			--extract $navars \
+			--out ${out}_noarray \
+			--pheno $phenofile \
+			--covar $covar --covar-name age PC1 PC2 PC3 PC4 \
+			--glm \
+			--pheno-quantile-normalize 
+	fi
 fi
 
-# Combine results file
-readarray repl < <(cat ${out}_noarray.${out_suffix%.gz.tbi});
-nr=1 
-echo "[$0 $(date +%Y%m%d-%H%M%S)] Combining results files..." >&2
-while read -r line; do 
-	rsid=$(echo $line | awk '{print $3}' );
-	# if this is a variant from the Array-less result take it
-	if [ "$(echo ${repl[$nr]} | awk '{print $3}')" == $rsid ]; then        
-		echo ${repl[$nr]};
-		nr=$(expr $nr + 1);
-	# otherwise we want the next one from the primary
-	else
-		echo $line;
-	fi;
-done < <(cat ${out}.${out_suffix%.gz.tbi}) > ${out}.${out_suffix%.gz.tbi}.combined
+echo "GWAS run #2"
+
+# handle the case where there is no no-array file - this is the case for X chromosome
+if [ -f ${out}_noarray.${out_suffix%.gz.tbi} ]; then 
+
+	echo "combining results"
+	# Combine results file
+	readarray repl < <(cat ${out}_noarray.${out_suffix%.gz.tbi});
+	nr=1 
+	echo "[$0 $(date +%Y%m%d-%H%M%S)] Combining results files..." >&2
+	while read -r line; do 
+		rsid=$(echo $line | awk '{print $3}' );
+		# if this is a variant from the Array-less result take it
+		if [ "$(echo ${repl[$nr]} | awk '{print $3}')" == $rsid ]; then        
+			echo ${repl[$nr]};
+			nr=$(expr $nr + 1);
+		# otherwise we want the next one from the primary
+		else
+			echo $line;
+		fi;
+	done < <(cat ${out}.${out_suffix%.gz.tbi}) > ${out}.${out_suffix%.gz.tbi}.combined
+else
+	cp ${out}.${out_suffix%.gz.tbi} ${out}.${out_suffix%.gz.tbi}.combined 
+fi 
+
 echo "[$0 $(date +%Y%m%d-%H%M%S)] Combined results written to ${out}.${out_suffix%.gz.tbi}.combined" >&2 
 
 # flip fix and rename

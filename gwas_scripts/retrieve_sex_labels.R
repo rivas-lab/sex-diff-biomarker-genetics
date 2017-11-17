@@ -1,6 +1,6 @@
 # retrieve_sex_labels.R
 # E Flynn
-# 9/11/2017
+# 9/11/2017, updated 11/17/17 to downsample
 #
 # Code to retrieve sex labels for IDs. 
 # Retrieves sex labels and then filters to remove 151k individuals not included in the analysis. 
@@ -23,12 +23,22 @@ cov_mat_filt <- cov_mat_sm[!(cov_mat_sm$IID %in% ids.to.remove),]
 # zerosex
 zeros <- cov_mat_filt[cov_mat_filt$sex==0,]
 zeros <- zeros[zeros$IID > 0, ] ### remove negative IIDs
-write.table(zeros$IID, file=sprintf("%s/zerosex.keep", PHE_OUT_DIR), col.names=FALSE, row.names=FALSE, quote=FALSE)	
 
 # onesex 
 ones <- cov_mat_filt[cov_mat_filt$sex==1,]
 ones <- ones[ones$IID > 0,] ### remove negative IIDs
-write.table(ones$IID, file=sprintf("%s/onesex.keep", PHE_OUT_DIR), col.names=FALSE, row.names=FALSE, quote=FALSE)	
 
+### DOWNSAMPLE
+num.f <- nrow(zeros) #181064
+num.m <- nrow(ones) #156135
+
+set.seed(1117)
+keep.rows <- sample(1:num.f, num.m, replace=FALSE)
+zeros.down <- zeros[keep.rows,]
+zeros <- zeros.down
+
+# write it out
+write.table(ones$IID, file=sprintf("%s/onesex.keep", PHE_OUT_DIR), col.names=FALSE, row.names=FALSE, quote=FALSE)  	
+write.table(zeros$IID, file=sprintf("%s/zerosex.keep", PHE_OUT_DIR), col.names=FALSE, row.names=FALSE, quote=FALSE)	
 
 
