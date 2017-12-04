@@ -13,7 +13,7 @@ require('rstan')
 
 # hard-coded cutoffs, we can adjust
 BINARY.SE.CUTOFF <- 1 ## might want to adjust
-QUANT.SE.CUTOFF <- 0.4
+QUANT.SE.CUTOFF <- 0.2
 
 GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results/"
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
@@ -299,52 +299,52 @@ getVars <- function(fit){
     return(sigmasq)
 }
 
-## Assign sample to a category based on estimated params
+# ## Assign sample to a category based on estimated params
 
-computePosterior <- function(B, SE, p, sigmasq){
+# computePosterior <- function(B, SE, p, sigmasq){
 
-    zeros <- c(0,0)
-    SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
+#     zeros <- c(0,0)
+#     SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
 
-    p_1 = p[1]*pmnorm(B, zeros, SE_mat)
-    p_2 = p[2]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[1], 0, 0, 0),2, 2))
-    p_3 = p[3]*pmnorm(B, zeros, SE_mat + matrix(c(0, 0, 0, sigmasq[2]),2,2))
-    p_4 = p[4]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[3], 0, 0, sigmasq[4]), 2,2))
-    p_tot = p_1 + p_2+ p_3 + p_4
-    prob_1 = p_1 / p_tot
-    prob_2 = p_2 / p_tot
-    prob_3 = p_3 / p_tot
-    prob_4 = p_4 / p_tot
-    return(list(prob_1, prob_2, prob_3, prob_4))
-}
+#     p_1 = p[1]*pmnorm(B, zeros, SE_mat)
+#     p_2 = p[2]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[1], 0, 0, 0),2, 2))
+#     p_3 = p[3]*pmnorm(B, zeros, SE_mat + matrix(c(0, 0, 0, sigmasq[2]),2,2))
+#     p_4 = p[4]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[3], 0, 0, sigmasq[4]), 2,2))
+#     p_tot = p_1 + p_2+ p_3 + p_4
+#     prob_1 = p_1 / p_tot
+#     prob_2 = p_2 / p_tot
+#     prob_3 = p_3 / p_tot
+#     prob_4 = p_4 / p_tot
+#     return(list(prob_1, prob_2, prob_3, prob_4))
+# }
 
-getAllPosteriors <- function(cov.dat, fit){
-	B.dat <- cov.dat$B
-    SE.dat <- cov.dat$SE
-    N <- cov.dat$N
-    sigmasq <- getVars(fit)
-    p <- getPi(fit) 
+# getAllPosteriors <- function(cov.dat, fit){
+#	B.dat <- cov.dat$B
+#     SE.dat <- cov.dat$SE
+#     N <- cov.dat$N
+#     sigmasq <- getVars(fit)
+#     p <- getPi(fit) 
     
-    posteriors <- lapply(1:N, function(i) computePosterior(B.dat[i,], SE.dat[i,], p, sigmasq))
-    posterior.df <- data.frame(do.call(rbind, posteriors))
-    return(posterior.df)
-}
+#     posteriors <- lapply(1:N, function(i) computePosterior(B.dat[i,], SE.dat[i,], p, sigmasq))
+#     posterior.df <- data.frame(do.call(rbind, posteriors))
+#     return(posterior.df)
+# }
 
-posteriorSNPtable <- function(dat, fit){
-    # generate a posterior SNP table
+# posteriorSNPtable <- function(dat, fit){
+#     # generate a posterior SNP table
 
-	posterior.df <- getAllPosteriors(dat$dat, fit)
+#	posterior.df <- getAllPosteriors(dat$dat, fit)
 
-	# assign to the category with the maximum posterior
-	posterior.df$category <- apply(posterior.df, 1, function(x){
-		return(which.max(x))
-	})
-	posterior.df$SNP <- dat$snp
-	colnames(posterior.df) <- c("p1", "p2", "p3", "p4", "category", "SNP")
+#	# assign to the category with the maximum posterior
+#	posterior.df$category <- apply(posterior.df, 1, function(x){
+#		return(which.max(x))
+#	})
+#	posterior.df$SNP <- dat$snp
+#	colnames(posterior.df) <- c("p1", "p2", "p3", "p4", "category", "SNP")
 
-	posterior.df <- data.frame(apply(posterior.df, c(1,2), unlist))
-	return(posterior.df)
-}
+#	posterior.df <- data.frame(apply(posterior.df, c(1,2), unlist))
+#	return(posterior.df)
+# }
 
 
 
