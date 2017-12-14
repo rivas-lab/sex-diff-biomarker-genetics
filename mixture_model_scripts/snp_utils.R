@@ -7,15 +7,15 @@ computePosterior <- function(B, SE, p, sigmasq){
     zeros <- c(0,0)
     SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
 
-    p_1 = p[1]*pmnorm(B, zeros, SE_mat)
-    p_2 = p[2]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[1], 0, 0, 0),2, 2))
-    p_3 = p[3]*pmnorm(B, zeros, SE_mat + matrix(c(0, 0, 0, sigmasq[2]),2,2))
-    p_4 = p[4]*pmnorm(B, zeros, SE_mat + matrix(c(sigmasq[3], 0, 0, sigmasq[4]), 2,2))
+    p_1 = p[1]*dmnorm(B, zeros, SE_mat)
+    p_2 = p[2]*dmnorm(B, zeros, SE_mat + matrix(c(sigmasq[1], 0, 0, 0),2, 2))
+    p_3 = p[3]*dmnorm(B, zeros, SE_mat + matrix(c(0, 0, 0, sigmasq[2]),2,2))
+    p_4 = p[4]*dmnorm(B, zeros, SE_mat + matrix(c(sigmasq[3], 0, 0, sigmasq[4]), 2,2))
     p_tot = p_1 + p_2+ p_3 + p_4
-    prob_1 = p_1 / p_tot
-    prob_2 = p_2 / p_tot
-    prob_3 = p_3 / p_tot
-    prob_4 = p_4 / p_tot
+    prob_1 = exp(log(p_1) - log(p_tot))
+    prob_2 = exp(log(p_2) - log(p_tot))
+    prob_3 = exp(log(p_3) - log(p_tot))
+    prob_4 = exp(log(p_4) - log(p_tot))
     return(list(prob_1, prob_2, prob_3, prob_4))
 }
 

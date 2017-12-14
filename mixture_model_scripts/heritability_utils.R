@@ -12,11 +12,11 @@ getPosterior <- function(B, SE, p, Sigma){
 
     zeros <-c(0,0)
     SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
-    p_1 = p[1]*pmnorm(B, zeros, SE_mat)
-    p_2 = p[2]*pmnorm(B, zeros, SE_mat + Sigma)
-    prob_1 = p_1 / (p_1 + p_2)
-    prob_2 = p_2 / (p_1 + p_2)
-    return(prob_2)   
+    p_1 = p[1]*dmnorm(B, zeros, SE_mat)
+    p_2 = p[2]*dmnorm(B, zeros, SE_mat + Sigma)
+    prob_1 = log(p_1) - log(p_1 + p_2)
+    prob_2 = log(p_2) - log(p_1 + p_2)
+    return(exp(prob_2))
 }
 
 getCategory <- function(posterior){
