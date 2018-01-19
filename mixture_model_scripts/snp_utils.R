@@ -2,7 +2,7 @@
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
-computePosterior <- function(B, SE, p, sigmasq){
+computePosterior <- function(B, SE, p, sigmasq, Sigma){
 
     zeros <- c(0,0)
     SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
@@ -10,7 +10,7 @@ computePosterior <- function(B, SE, p, sigmasq){
     p_1 = p[1]*dmnorm(B, zeros, SE_mat)
     p_2 = p[2]*dmnorm(B, zeros, SE_mat + matrix(c(sigmasq[1], 0, 0, 0),2, 2))
     p_3 = p[3]*dmnorm(B, zeros, SE_mat + matrix(c(0, 0, 0, sigmasq[2]),2,2))
-    p_4 = p[4]*dmnorm(B, zeros, SE_mat + matrix(c(sigmasq[3], 0, 0, sigmasq[4]), 2,2))
+    p_4 = p[4]*dmnorm(B, zeros, SE_mat + Sigma)
     p_tot = p_1 + p_2+ p_3 + p_4
     prob_1 = exp(log(p_1) - log(p_tot))
     prob_2 = exp(log(p_2) - log(p_tot))
@@ -25,8 +25,9 @@ getAllPosteriors <- function(cov.dat, fit){
     N <- cov.dat$N
     sigmasq <- getVars(fit)
     p <- getPi(fit) 
+    Sigma <- getSigma(fit)
     
-    posteriors <- lapply(1:N, function(i) computePosterior(B.dat[i,], SE.dat[i,], p, sigmasq))
+    posteriors <- lapply(1:N, function(i) computePosterior(B.dat[i,], SE.dat[i,], p, sigmasq, Sigma))
     posterior.df <- data.frame(do.call(rbind, posteriors))
     return(posterior.df)
 }
