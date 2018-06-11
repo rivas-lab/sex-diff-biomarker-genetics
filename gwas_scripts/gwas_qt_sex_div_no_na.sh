@@ -19,7 +19,7 @@ if [ $# -lt 7 ] ; then threads=8 ; else threads=$7 ; fi
 UKB_app_id=$1
 
 target=/oak/stanford/groups/mrivas/ukbb/24983
-outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results_test
+outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/xchr_analysis
 if [ ! -d $outDir ] ; then mkdir -p $outDir ; fi
 
 # which sex to analyzeoo
@@ -84,6 +84,7 @@ if [ ! -f ${out}.${out_suffix%.gz.tbi} ] ; then
 		--pheno $phenofile \
 		--covar $covar --covar-name age Array PC1 PC2 PC3 PC4 \
 		--glm \
+		--xchr-model 1 \
 		--pheno-quantile-normalize
 fi
 
@@ -102,6 +103,7 @@ if [ ! -f ${out}_noarray.${out_suffix%.gz.tbi} ] ; then
 			--pheno $phenofile \
 			--covar $covar --covar-name age PC1 PC2 PC3 PC4 \
 			--glm \
+			--xchr-model 1 \
 			--pheno-quantile-normalize 
 	fi
 fi

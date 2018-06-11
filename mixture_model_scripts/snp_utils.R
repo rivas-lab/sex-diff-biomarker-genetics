@@ -25,7 +25,11 @@ getAllPosteriors <- function(cov.dat, fit){
     N <- cov.dat$N
     sigmasq <- getVars(fit)
     p <- getPi(fit) 
-    Sigma <- getSigma(fit)
+    if (length(sigmasq)==4) {
+        Sigma <- matrix(c(sigmasq[3], 0, 0, sigmasq[4]),2,2)
+    } else{
+        Sigma <- getSigma(fit)
+    }
     
     posteriors <- lapply(1:N, function(i) computePosterior(B.dat[i,], SE.dat[i,], p, sigmasq, Sigma))
     posterior.df <- data.frame(do.call(rbind, posteriors))
@@ -51,15 +55,22 @@ posteriorSNPtable <- function(dat, fit){
 
                              
 ## Write out sex-specific SNP tables                             
-sexSpecSNPtables <- function(snp, df.f, df.m, categories){
-    f.specific <- snp[which(categories==2)]
-    m.specific <- snp[which(categories==3)]
+sexSpecSNPtables <- function(df.f, df.m, snp.df){
+    f.spec <- snp.df[which(snp.df$category==2),c("p2", "SNP")]
+    m.spec <- snp.df[which(snp.df$category==3),c("p3", "SNP")]
+    colnames(f.spec) <- c("post", "SNP")
+    colnames(m.spec) <- c("post", "SNP")
+
+
+    f.specific <- f.spec$SNP
+    m.specific <- m.spec$SNP
 
     if (length(m.specific) > 0){
         m.snps <- cbind(df.f[df.f$SNP %in% m.specific ,c("SNP", "CHR", "BP", "BETA","SE", "P")], 
          df.m[df.m$SNP %in% m.specific,c("BETA","SE", "P")])
         colnames(m.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
-        m.snps.df <- m.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")]        
+        m.snps.df <- m.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
+        m.snps.df <- merge(m.snps.df, m.spec, by="SNP")       
     } else {
         m.snps.df <- ""
     }
@@ -67,7 +78,9 @@ sexSpecSNPtables <- function(snp, df.f, df.m, categories){
         f.snps <- cbind(df.f[df.f$SNP %in% f.specific,c("SNP", "CHR", "BP", "BETA","SE", "P")], 
           df.m[df.m$SNP %in% f.specific,c("BETA","SE", "P")])
         colnames(f.snps) <- c("SNP", "CHR", "BP" , "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
-        f.snps.df <- f.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")]        
+        f.snps.df <- f.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
+        f.snps.df <- merge(f.snps.df, f.spec, by="SNP")       
+       
     } else {
         f.snps.df <- ""
     }

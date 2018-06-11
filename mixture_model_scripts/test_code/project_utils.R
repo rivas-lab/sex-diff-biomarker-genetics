@@ -126,8 +126,8 @@ getCat <- function(B, SE, p, sigmasq){
     prob_2 = p_2 / p_tot
     prob_3 = p_3 / p_tot
     prob_4 = p_4 / p_tot
-    cats <- rmultinom(1, 1, c(prob_1, prob_2, prob_3, prob_4)) 
-    category <- which(cats == 1)
+    cats <- c(prob_1, prob_2, prob_3, prob_4) #rmultinom(1, 1, c(prob_1, prob_2, prob_3, prob_4)) 
+    category <- which.max(cats) #which(cats == 1)
     return(category)
 }
 

@@ -10,7 +10,7 @@
 #   - extract results divided by chromosome (intended for X/XY/autosomal sub-analyses)
 
 source('model_utils.R')
-source('hertiability_utils.R')
+source('heritability_utils.R')
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
@@ -37,7 +37,7 @@ loadDat <- function(trait, trait.type){
 
 	# load all the data
 	if (trait.type == 'binary'){
-		all.dat <- lapply(1:22, function(x){ getDataBin(as.character(x), trait)})
+		all.dat <- lapply(c(1:22, "X", "XY"), function(x){ getDataBin(as.character(x), trait)})
 	} 
 	if (trait.type == 'quant') {
 		all.dat <- lapply(c(1:22, "X", "XY"), function(x){ getDataQuant(as.character(x), trait)})

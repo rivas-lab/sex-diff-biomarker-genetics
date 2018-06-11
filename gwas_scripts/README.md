@@ -17,9 +17,9 @@ First I set up IDs for the phenotype.
 
 Then, to run GWAS:
 
-```sbatch --array=1-22 submit_gwas_run.sh zerosex```
+```sbatch --array=1-25 submit_gwas_run.sh zerosex```
 
-```sbatch --array=1-22 submit_gwas_run.sh onesex```
+```sbatch --array=1-25 submit_gwas_run.sh onesex```
 
 ```This runs the script gwas_qt_sex_div.sh```
 

@@ -17,6 +17,8 @@ maf.cutoff <- 0.01
 se.cutoff <- 0.2
 chrs <- c(1:22)
 
+calcLoglik <- FALSE
+
 loadDat <- function(trait, trait.type){
 	# function for loading the data
 
@@ -53,40 +55,52 @@ runM2 <- function(trait, trait.type){
 
     dat <- loadDat(trait, trait.type)
     dat$dat$K <- 4
-    save(dat, file=sprintf("%s/m2_v3/dat_%s.RData", DATA.FOLDER, trait))
-    fit2 <- stan(file = "models/model2_v2.stan",  
+    save(dat, file=sprintf("%s/m2_v4/dat_%s.RData", DATA.FOLDER, trait))
+    if (calcLoglik==TRUE){
+        model.file <- "models/model2_loglik.stan" # this is v2...
+    } else {
+        model.file <- "models/model2.stan" # v2??
+    }
+    fit2 <- stan(file = model.file,  
             data = dat$dat,    
             chains = 4, warmup = 200, iter = 600, cores = 4, refresh = 200)
   
     print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/m2_v3/f_m2_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/m2_v4/f_m2_%s.RData", DATA.FOLDER, trait))
 }
 
 runM2.a <- function(trait, trait.type){
 	# run alternative model for model 2 
     
-    dat <- loadDat(trait, trait.type, maf.cutoff, filt, se.cutoff)
+    dat <- loadDat(trait, trait.type)
     dat$dat$K <- 2
 
-    fit2 <- stan(file = "models/model2_alt.stan",  
+    if (calcLoglik==TRUE){
+        model.file <- "models/model2_alt_loglik.stan"
+    } else {
+        model.file <- "models/model2_alt.stan"
+    }
+
+    fit2 <- stan(file = model.file,  
             data = dat$dat,    
             chains = 4, warmup = 200, iter = 600, cores = 4, refresh = 200)
 
-    print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
+    print(fit2, pars=c("pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/m2/f_m2.a_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/m2_v4/f_m2.a_%s.RData", DATA.FOLDER, trait))
 }
 
 
 ### post-processing
 extractData <- function(trait){
 	print("Extracting")
+    print(trait)
 
-	load(file=sprintf("%s/m2_v3/dat_%s.RData", DATA.FOLDER, trait))
-    load(file=sprintf("%s/m2_v3/f_m2_%s.RData", DATA.FOLDER, trait))
+	load(file=sprintf("%s/m2_v4/dat_%s.RData", DATA.FOLDER, trait)) 
+    load(file=sprintf("%s/m2_v4/f_m2_%s.RData", DATA.FOLDER, trait))
 
     # fraction in non-null component
     p <- getPi(fit2)
@@ -100,7 +114,7 @@ extractData <- function(trait){
 
     # assign each SNP to a category
     posterior.df <- posteriorSNPtable(dat, fit2)
-    write.table(posterior.df, file=sprintf("%s/m2_v3/snp_table_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+    write.table(posterior.df, file=sprintf("%s/m2_v4/snp_table_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
     print("Posterior table generated")
 
     # remove large files from the workspace
@@ -120,11 +134,11 @@ extractData <- function(trait){
     filt.f <- dat.filt$`1`
     filt.m <- dat.filt$`2`
 
-    snp.tab <- sexSpecSNPtables(posterior.df$SNP, filt.f, filt.m, posterior.df$category)
+    snp.tab <- sexSpecSNPtables(posterior.df, filt.f, filt.m) #sexSpecSNPtables(posterior.df$SNP, filt.f, filt.m, posterior.df$category)
     f.tab <- annotateSNP(snp.tab$'1')
     m.tab <- annotateSNP(snp.tab$'2')
-	write.table(f.tab, file=sprintf("%s/m2_v3/f_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
-	write.table(m.tab, file=sprintf("%s/m2_v3/m_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+	write.table(f.tab, file=sprintf("%s/m2_v4/f_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+	write.table(m.tab, file=sprintf("%s/m2_v4/m_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
 }
 
 

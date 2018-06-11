@@ -21,9 +21,9 @@ getPosterior <- function(B, SE, p, Sigma){
 
 getCategory <- function(posterior){
 	# get the category of a SNP given the posterior
-	# we assign SNPs to the non-null component if the posterior probability is >= 0.8
+	# we assign SNPs to the non-null component if the posterior probability is >= 0.7
 
-    category <- ifelse(posterior >= 0.8, 2, 1)
+    category <- ifelse(posterior >= 0.7, 2, 1)
     return(category)   
 }
 

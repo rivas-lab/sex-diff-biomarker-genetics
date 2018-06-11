@@ -69,7 +69,7 @@ generated quantities {
     
     for (n in 1:N){
         for (k in 1:K){
-           ps[k] = log(pi[k]) + multi_normal_lpdf(B[n] | zeros, diag_matrix(to_vector(SE[n])) + Sigma[k]);
+           ps[k] = log(pi[k]) + multi_normal_lpdf(B[n] | zeros, diag_matrix(to_vector(SE[n])) + Sigmas[k]);
         }
         log_lik[n] = log_sum_exp(ps);
     }

@@ -18,10 +18,10 @@ if [ $# -lt 7 ] ; then threads=8 ; else threads=$7 ; fi
 UKB_app_id=$1
 
 target=/oak/stanford/groups/mrivas/ukbb/24983
-outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results2
+outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results3
 if [ ! -d $outDir ] ; then mkdir -p $outDir ; fi
 
-# which sex to analyzeoo
+# which sex to analyze
 sex=$2 # onesex or zerosex
 
 # phenofile
@@ -52,7 +52,7 @@ covar=$target/phe_qc/ukb24983_GWAS_covar.phe
 #sampleqc=$target/phe/ukb24983_remove.phe
 #reducted=$target/phe/w2498_20170726.phe
 navars=$target/cal/gwas/na.vars.list # variants only on one array
-sex_ids=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phefiles/${sex}.keep ### sampleqc, reducted already removed from these
+sex_ids=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phefiles/old_sex_labels/${sex}.keep ### sampleqc, reducted already removed from these -- ALSO these are not downsampled
 
 
 for input_f in $phenofile $bed $bim $fam $covar $sex_ids ; do if [ ! -f $input_f ] ; then
@@ -81,38 +81,50 @@ if [ ! -f ${out}.${out_suffix%.gz.tbi} ] ; then
 		--out $out \
 		--pheno $phenofile \
 		--covar $covar --covar-name age Array PC1 PC2 PC3 PC4 \
+		--xchr-model 1 \
 		--glm firth-fallback
 fi
 
 # PLINK without Array
 if [ ! -f ${out}_noarray.${out_suffix%.gz.tbi} ] ; then
-	echo "[$0 $(date +%Y%m%d-%H%M%S)] Running GWAS (no array) with plink2" >&2
-	plink2 --memory $memory --threads $threads \
-		--bed $bed --bim $bim --fam $fam \
-		--keep $sex_ids \
-		--extract $navars \
-		--out ${out}_noarray \
-		--pheno $phenofile \
-		--covar $covar --covar-name age PC1 PC2 PC3 PC4 \
-		--glm firth-fallback
+	echo "Checking chromosome"
+	if [[ ! $N == "X" ]]; then 
+		echo "[$0 $(date +%Y%m%d-%H%M%S)] Running GWAS (no array) with plink2" >&2
+		plink2 --memory $memory --threads $threads \
+			--bed $bed --bim $bim --fam $fam \
+			--keep $sex_ids \
+			--extract $navars \
+			--out ${out}_noarray \
+			--pheno $phenofile \
+			--covar $covar --covar-name age PC1 PC2 PC3 PC4 \
+			--xchr-model 1 \
+			--glm firth-fallback
+	fi
 fi
 
-# Combine results file
-readarray repl < <(cat ${out}_noarray.${out_suffix%.gz.tbi});
-nr=1 
-echo "[$0 $(date +%Y%m%d-%H%M%S)] Combining results files..." >&2
-while read -r line; do 
-	rsid=$(echo $line | awk '{print $3}' );
-	# if this is a variant from the Array-less result take it
-	if [ "$(echo ${repl[$nr]} | awk '{print $3}')" == $rsid ]; then        
-		echo ${repl[$nr]};
-		nr=$(expr $nr + 1);
-	# otherwise we want the next one from the primary
-	else
-		echo $line;
-	fi;
-done < <(cat ${out}.${out_suffix%.gz.tbi}) > ${out}.${out_suffix%.gz.tbi}.combined
-echo "[$0 $(date +%Y%m%d-%H%M%S)] Combined results written to ${out}.${out_suffix%.gz.tbi}.combined" >&2 
+# handle the case where there is no no-array file - this is the case for X chromosome
+if [ -f ${out}_noarray.${out_suffix%.gz.tbi} ]; then 
+
+	echo "combining results"
+	# Combine results file
+	readarray repl < <(cat ${out}_noarray.${out_suffix%.gz.tbi});
+	nr=1 
+	echo "[$0 $(date +%Y%m%d-%H%M%S)] Combining results files..." >&2
+	while read -r line; do 
+		rsid=$(echo $line | awk '{print $3}' );
+		# if this is a variant from the Array-less result take it
+		if [ "$(echo ${repl[$nr]} | awk '{print $3}')" == $rsid ]; then        
+			echo ${repl[$nr]};
+			nr=$(expr $nr + 1);
+		# otherwise we want the next one from the primary
+		else
+			echo $line;
+		fi;
+	done < <(cat ${out}.${out_suffix%.gz.tbi}) > ${out}.${out_suffix%.gz.tbi}.combined
+	echo "[$0 $(date +%Y%m%d-%H%M%S)] Combined results written to ${out}.${out_suffix%.gz.tbi}.combined" >&2 
+else
+	cp ${out}.${out_suffix%.gz.tbi} ${out}.${out_suffix%.gz.tbi}.combined 
+fi 
 
 # flip fix and rename
 echo "[$0 $(date +%Y%m%d-%H%M%S)] flip fix script" >&2
