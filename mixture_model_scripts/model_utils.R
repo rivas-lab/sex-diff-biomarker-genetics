@@ -26,6 +26,21 @@ vars.to.keep <- read.table(sprintf("%s/snp_filt_list.txt", DATA.FOLDER), header=
 
 #### ----- DATA INPUT ----- ####
 
+fileChecks <- function(my.file, dat.source, chr, field){
+    if (!file.exists(my.file)){
+        print(sprintf("File missing for c%s trait:%s %s", chr, field, dat.source))
+        return(-1) # error
+    } 
+   
+    try.f <- try(read.table(my.file))
+   
+    if (inherits(try.f, "try-error")){
+        print(sprintf("Error loading files for c%s trait:%s - %s", chr, field, dat.source))
+        return(-1)
+    }
+    return(1)
+}
+
 fileChecks <- function(file.f, file.m, chr, field){
 	if (!file.exists(file.f)){
         print(sprintf("File missing for c%s trait:%s - female", chr, field))
@@ -206,6 +221,11 @@ extractDataStan <- function(filt.f, filt.m){
     dat <- list("dat"=cov.data, "snp"=snps, "chr"=chr)
     return(dat)
 }
+
+
+
+
+
 
 #### ----- MODEL RUNNING ----- ####
 

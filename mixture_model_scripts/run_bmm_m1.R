@@ -11,6 +11,7 @@
 
 source('model_utils.R')
 source('heritability_utils.R')
+source('model_utils_v3.R')
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
@@ -27,20 +28,32 @@ if (!trait.type %in% c('binary', 'quant')){ stop ("please specify the type of tr
 
 maf.cutoff <- 0.01
 se.cutoff <- 0.2
+if (length(args > 3)){
+    ndim <- args[4]
+} else {
+    ndim <- 2
+}
+
+chrs <- c(1:22, "X", "XY") # make sure works
 
 ### generate a log file
 print(sprintf("Running M1 for trait %s with MAF cutoff and SE cutoff %s.", trait, maf.cutoff, se.cutoff))
 
 
+snps.to.keep <- filterMAF(maf.cutoff)
+
+
 loadDat <- function(trait, trait.type){
+
+
 	# function for loading the data
 
 	# load all the data
 	if (trait.type == 'binary'){
-		all.dat <- lapply(c(1:22, "X", "XY"), function(x){ getDataBin(as.character(x), trait)})
+		all.dat <- lapply(chrs, function(x){ getDataBin(as.character(x), trait)})
 	} 
 	if (trait.type == 'quant') {
-		all.dat <- lapply(c(1:22, "X", "XY"), function(x){ getDataQuant(as.character(x), trait)})
+		all.dat <- lapply(chrs, function(x){ getDataQuant(as.character(x), trait)})
 	}
 
 	# reformat data, remove rows that are not shared
@@ -60,14 +73,24 @@ loadDat <- function(trait, trait.type){
     return(dat)
 }
 
+# loadDat3 <- function(trait, trait.type){
+
+#      all.dat <- lapply(c(chrs), function(x){ getDataQuantMeno(as.character(x), trait, trait.type)})
+#      reform.dat <- reformDat3(all.dat, "quant")    
+#      dat <- extractDataStan3(reform.dat)
+#      return(dat)
+# }
 
 
 runM1 <- function(trait, trait.type){
 	# run model 1 for a specified trait
-    
-    dat <- loadDat(trait, trait.type)
+    if (ndim==3){
+        dat <- loadDat3(trait, trait.type)
+    } else {
+        dat <- loadDat(trait, trait.type)
+    }
     dat$dat$K <- 2
-    save(dat, file=sprintf("%s/dat_set/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/meno/dat_%s.RData", DATA.FOLDER, trait))
     print("LEARNING PARAMS")
     fit1 <- stan(file = "models/model1_no_loglik.stan",  
             data = dat$dat,    
@@ -75,7 +98,7 @@ runM1 <- function(trait, trait.type){
     print("SAVING")
     rm(dat)
     print(fit1, pars=c("Sigma", "pi", "Omegacor"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
-    save(fit1, file=sprintf("%s/dat_set/f_%s.RData", DATA.FOLDER, trait))
+    save(fit1, file=sprintf("%s/meno/f_%s.RData", DATA.FOLDER, trait))
 
 }
 
@@ -115,7 +138,7 @@ extractData <- function(trait){
 }
 
 runM1(trait, trait.type)
-extractData(trait)
+#extractData(trait)
 
 
 
