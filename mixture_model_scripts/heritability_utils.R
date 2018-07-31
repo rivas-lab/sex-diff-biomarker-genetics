@@ -10,8 +10,8 @@ DATA.DIR <- '/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data'
 getPosterior <- function(B, SE, p, Sigma){
 	# get the posterior probability for a SNP
 
-    zeros <-c(0,0)
-    SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
+    zeros <- rep(0, length(SE)) #c(0,0)
+    SE_mat <- diag(SE) #matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
     p_1 = p[1]*dmnorm(B, zeros, SE_mat)
     p_2 = p[2]*dmnorm(B, zeros, SE_mat + Sigma)
     prob_1 = log(p_1) - log(p_1 + p_2)
@@ -23,7 +23,7 @@ getCategory <- function(posterior){
 	# get the category of a SNP given the posterior
 	# we assign SNPs to the non-null component if the posterior probability is >= 0.7
 
-    category <- ifelse(posterior >= 0.7, 2, 1)
+    category <- ifelse(posterior >= 0.7, 2, 1) # is poster
     return(category)   
 }
 
@@ -40,6 +40,7 @@ labelCategories <- function(dat, Sigma, p){
 	dat$categories <- categories	
 	return(dat)
 }
+
 
 getH <- function(SE, Sigma, category){
 	#  get the individual heritability for a specific SNP
@@ -78,11 +79,21 @@ calcHeritability <- function(se.p2, Sigma, p){
 
 }
 
+calcHeritabilityMulti <- function(se.p2, Sigma, p, idx){
+    n <- nrow(se.p2)
+    num_i <- n*(p[2])*Sigma[idx,idx]
+    
+    h_i <- num_i/(num_i + sum(se.p2[,idx]))
+    return(h_i)
+}
+
 overallHeritability <- function(dat, Sigma, p){
 	# compute the overall heritability for a quantitative trait
 
     se.p2 <- dat$dat$SE[dat$categories==2,]
-    return(calcHeritability(se.p2, Sigma, p))
+
+    list.h <- sapply(1:nrow(Sigma), function(idx) calcHeritabilityMulti(se.p2, Sigma, p, idx))
+    return(list.h)
 }
 
 ### TODO - x chromosome specific

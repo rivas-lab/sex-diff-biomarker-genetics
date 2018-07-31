@@ -23,8 +23,8 @@ echo $PHE_FILE
 echo $CHR
 
 # for now some messy exports to set up dependencies, will fix later
-#export PATH=/oak/stanford/groups/mrivas/software/plink2/20170904/:$PATH
-export PATH=/home/erflynn/applications/plink2/20180223/:$PATH # location of latest plink version
+export PATH=/oak/stanford/groups/mrivas/software/plink2/20170904/:$PATH
+#export PATH=/home/erflynn/applications/plink2/20180223/:$PATH # location of latest plink version
 export PATH=$PATH:$HOME/applications/htslib-1.5/installation/bin
 ml py-scipystack # for pandas
 

@@ -19,11 +19,11 @@ if [ $# -lt 7 ] ; then threads=8 ; else threads=$7 ; fi
 UKB_app_id=$1
 
 target=/oak/stanford/groups/mrivas/ukbb/24983
-outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/xchr_analysis
+outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/age_sex_meno
 if [ ! -d $outDir ] ; then mkdir -p $outDir ; fi
 
-# which sex to analyzeoo
-sex=$2 # onesex or zerosex
+# which sex to analyze
+sex=$2 # onesex or zerosex [ or pre_meno or post_meno or downsampled - or whatever]
 
 # phenofile
 phen=$3

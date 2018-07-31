@@ -15,12 +15,12 @@ require('rstan')
 BINARY.SE.CUTOFF <- 1 ## might want to adjust
 QUANT.SE.CUTOFF <- 0.2
 
-GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results/"
+GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/age_sex_meno/"
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
-# list of filtered variants
-vars.to.keep <- read.table(sprintf("%s/snp_filt_list.txt", DATA.FOLDER), header=FALSE, 
+# list of filtered variants - how was this constructed?? need to check
+snps.to.keep <- read.table(sprintf("%s/snp_filt_list.txt", DATA.FOLDER), header=FALSE, 
     colClasses="character")
 
 
@@ -41,55 +41,12 @@ fileChecks <- function(my.file, dat.source, chr, field){
     return(1)
 }
 
-fileChecks <- function(file.f, file.m, chr, field){
-	if (!file.exists(file.f)){
-        print(sprintf("File missing for c%s trait:%s - female", chr, field))
-        return(-1) # error
-    } 
-    if (!file.exists(file.m)){
-        print(sprintf("File missing for c%s trait:%s - male", chr, field))
-        return(-1)
-    } 
-
-    try.f <- try(read.table(file.f))
-    try.m <- try(read.table(file.m))
-    if (inherits(try.f, "try-error")){
-        print(sprintf("Error loading files for c%s trait:%s - female", chr, field))
-        return(-1)
-    }
-    if (inherits(try.m, "try-error")){
-        print(sprintf("Error loading files for c%s trait:%s - male", chr, field))
-        return(-1)
-    }
-
-   	return(1)
-}
-
-filtUkbDat <- function(d1, d2){
-    
-    # select only the rows with the additive model
-    d1.1 <- d1[d1$TEST == "ADD",]
-    d2.1 <- d2[d2$TEST == "ADD",]
-    rownames(d1.1) <- d1.1$SNP
-    rownames(d2.1) <- d2.1$SNP
-    
-    # select rows in both and reorder based on this
-    joint.rows <- intersect(rownames(d1.1), rownames(d2.1))
-    d1.2 <- d1.1[joint.rows,]
-    d2.2 <- d2.1[joint.rows,]
-    
-    # remove NAs
-    present.rows <- c((!is.na(d1.2$SE)) & (!is.na(d2.2$SE)))
-    
-    return(list('1'=d1.2[present.rows,], '2'=d2.2[present.rows,]))
-}
-
-
-getDataQuant <- function(chr, field){
-    # load data for a chromosome and a data field,
+### LOAD SOME OF THE data
+# NOTE - this is only for quantitative
+getFile <- function(dat.source, chr, field){
     prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
-    file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
-    file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
+
+    file.dat <- paste(c(prefix, ".", dat.source, ".PHENO1_c", chr, ".glm.linear.gz"), collapse="")
 
     my.classes = c("character", "numeric", "character", "character","character", "character",
                    "numeric", "numeric", "numeric", "numeric", "numeric")
@@ -97,56 +54,190 @@ getDataQuant <- function(chr, field){
     col.labels <- c("CHROM", "POS", "ID", "REF", "ALT1", "TEST", "OBS_CT", 
         "BETA", "SE", "T_STAT", "P")
 
-    checks <- fileChecks(file.f, file.m, chr, field)
+    checks <- fileChecks(file.dat, dat.source, chr, field)
     if (checks == -1){ return(NA) }
     
-    dat.f <- read.table(file.f, colClasses=my.classes, header=FALSE)
-    dat.m <- read.table(file.m, colClasses=my.classes, header=FALSE)
-    colnames(dat.f) <- col.labels
-    colnames(dat.m) <- col.labels
-    filt.dat <- filtUkbDat(dat.f, dat.m)
-    return(filt.dat)
+    dat <- read.table(file.dat, colClasses=my.classes, header=FALSE)
+    colnames(dat) <- col.labels
+
+    # -- FILTERING -- #
+
+    # select only the rows with the additive model
+    dat.1 <- dat[dat$TEST == "ADD",]
+    rownames(dat.1) <- dat.1$SNP
+
+    # remove NAs
+    dat.2 <- dat.1[!is.na(dat.1$SE),]
+
+    # SE filter
+    dat.3 <- dat.2[dat.2$SE > QUANT.SE.CUTOFF,]
+
+    # MAF filter
+    dat.4 <- dat.3[dat.3$ID %in% snps.to.keep$V1,]
+
+    return(dat.4)
+}
+
+extractOverlappingRows <- function(list.ds){
+    print(length(list.ds))
+    print(dim(list.ds[[1]]))
+    rows.to.keep <- rownames(list.ds[[1]])
+    for (i in 2:length(list.ds)){
+        dat <- list.ds[[i]]
+        rows.to.keep <- intersect(rows.to.keep, rownames(dat))
+    }
+    list.ds2 <- lapply(list.ds, function(x) x[rows.to.keep,])
+
+    return(list.ds2)
+}
+
+extractDataStanMulti <- function(all.dat){
+    # put together betas and ses, sq se for SE matrix
+    betas <- do.call(cbind, lapply(all.dat, function(x) x$BETA))
+    ses <- do.call(cbind, lapply(all.dat, function(x) x$SE))
+    se2 <- apply(ses, c(1,2), function(x) x^2)
+
+    cov.data <- list(
+        N = nrow(betas),
+        M = length(all.dat),
+        B = betas,
+        SE = se2,
+        K = 2
+    )
+    snps <- sapply(all.dat[[1]]$SNP, as.character)
+    chr <- sapply(all.dat[[1]]$CHR, as.character)
+    dat <- list("dat"=cov.data, "snp"=snps, "chr"=chr)
+    return(dat)
 }
 
 
-
-getDataBin <- function(chr, field){
-    # load data for a chromosome and a data field. 
-    prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
-    file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.logistic.hybrid.gz"), collapse="")
-    file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.logistic.hybrid.gz"), collapse="")
-
-    my.classes = c("character", "numeric", "character", "factor", "factor", "factor", "character",
-                   "numeric", "numeric", "numeric", "numeric", "numeric") # this is diff from quant
-
-    col.labels <- c("CHROM", "POS", "ID", "REF", "ALT", "FIRTH?", "TEST", "OBS_CT", 
-        "OR", "SE", "T_STAT", "P")
-
-    checks <- fileChecks(file.f, file.m, chr, field)
-    if (checks == -1){ return(NA) }
-
-    dat.f <- read.table(file.f,  colClasses=my.classes)
-    dat.m <- read.table(file.m, colClasses=my.classes)
-    colnames(dat.f) <- col.labels
-    colnames(dat.m) <- col.labels
-
-    filt.dat <- filtUkbDat(dat.f, dat.m)
-    return(filt.dat)
+getSigmaMulti <- function(fit1, ndim){
+      fit_summ_S <- summary(fit1, pars=c("Sigma"), probs=c(0.05, 0.95))
+      Sigma <- matrix(fit_summ_S$summary[,c("mean")], ndim, ndim)
+      return(Sigma)
 }
 
 
-
-filterMAF <- function(maf.cutoff){
-    rem.snps <- read.table(sprintf("%s/snp_filt_metadata.txt", DATA.FOLDER), header=TRUE)
-    filt.snps <- sapply(rem.snps[rem.snps$maf >=maf.cutoff,]$ID, as.character)
-
-    # load other SNPs filtering data - X, XY, Y, MT
-    alt_chr <- read.table(sprintf("%s/chr_qc/alt_chr_qc_table.txt", DATA.FOLDER), header=TRUE)
-    filt.snps2 <- sapply(alt_chr[(alt_chr$keep==1 & alt_chr$MAF >=maf.cutoff),]$SNP, as.character)
-
-    filt.snps.full <- c(filt.snps, filt.snps2)
-    return(filt.snps.full)
+getRgMulti <- function(fit, ndim){
+    #rg <- cov2cor(S)
+    #return(rg[1,2])
+    fit_summ_R <- summary(fit, pars=c("Omegacor"), probs=c(0.05, 0.95))
+    rg <- matrix(fit_summ_R$summary[,c("mean")], ndim, ndim)
+    return(rg[upper.tri(rg, diag=FALSE)])
 }
+
+
+getRgConfMulti <- function(fit, ndim){ # 95% confidence interval
+    fit_summ_R <- summary(fit, pars=c("Omegacor"), probs=c(0.025, 0.975))
+
+
+    pairs <- combn(ndim, 2)
+    list.labels <- apply(pairs, 2, function(x) sprintf("Omegacor[%s,%s]", x[1], x[2]))
+    conf.l <- fit_summ_R$summary[list.labels,"2.5%"]
+    conf.u <- fit_summ_R$summary[list.labels,"97.5%"]
+    return(list("l"=conf.l, "u"=conf.u))
+}
+
+
+# fileChecks <- function(file.f, file.m, chr, field){
+#	if (!file.exists(file.f)){
+#         print(sprintf("File missing for c%s trait:%s - female", chr, field))
+#         return(-1) # error
+#     } 
+#     if (!file.exists(file.m)){
+#         print(sprintf("File missing for c%s trait:%s - male", chr, field))
+#         return(-1)
+#     } 
+
+#     try.f <- try(read.table(file.f))
+#     try.m <- try(read.table(file.m))
+#     if (inherits(try.f, "try-error")){
+#         print(sprintf("Error loading files for c%s trait:%s - female", chr, field))
+#         return(-1)
+#     }
+#     if (inherits(try.m, "try-error")){
+#         print(sprintf("Error loading files for c%s trait:%s - male", chr, field))
+#         return(-1)
+#     }
+
+#	return(1)
+# }
+
+# filtUkbDat <- function(d1, d2){
+    
+    
+#     # select rows in both and reorder based on this
+#     joint.rows <- intersect(rownames(d1.1), rownames(d2.1))
+#     d1.2 <- d1.1[joint.rows,]
+#     d2.2 <- d2.1[joint.rows,]
+    
+    
+#     return(list('1'=d1.2[present.rows,], '2'=d2.2[present.rows,]))
+# }
+
+
+# getDataQuant <- function(chr, field){
+#     # load data for a chromosome and a data field,
+#     prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
+#     file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
+#     file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
+
+#     my.classes = c("character", "numeric", "character", "character","character", "character",
+#                    "numeric", "numeric", "numeric", "numeric", "numeric")
+
+#     col.labels <- c("CHROM", "POS", "ID", "REF", "ALT1", "TEST", "OBS_CT", 
+#         "BETA", "SE", "T_STAT", "P")
+
+#     checks <- fileChecks(file.f, file.m, chr, field)
+#     if (checks == -1){ return(NA) }
+    
+#     dat.f <- read.table(file.f, colClasses=my.classes, header=FALSE)
+#     dat.m <- read.table(file.m, colClasses=my.classes, header=FALSE)
+#     colnames(dat.f) <- col.labels
+#     colnames(dat.m) <- col.labels
+#     filt.dat <- filtUkbDat(dat.f, dat.m)
+#     return(filt.dat)
+# }
+
+
+
+# getDataBin <- function(chr, field){
+#     # load data for a chromosome and a data field. 
+#     prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
+#     file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.logistic.hybrid.gz"), collapse="")
+#     file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.logistic.hybrid.gz"), collapse="")
+
+#     my.classes = c("character", "numeric", "character", "factor", "factor", "factor", "character",
+#                    "numeric", "numeric", "numeric", "numeric", "numeric") # this is diff from quant
+
+#     col.labels <- c("CHROM", "POS", "ID", "REF", "ALT", "FIRTH?", "TEST", "OBS_CT", 
+#         "OR", "SE", "T_STAT", "P")
+
+#     checks <- fileChecks(file.f, file.m, chr, field)
+#     if (checks == -1){ return(NA) }
+
+#     dat.f <- read.table(file.f,  colClasses=my.classes)
+#     dat.m <- read.table(file.m, colClasses=my.classes)
+#     colnames(dat.f) <- col.labels
+#     colnames(dat.m) <- col.labels
+
+#     filt.dat <- filtUkbDat(dat.f, dat.m)
+#     return(filt.dat)
+# }
+
+
+
+# filterMAF <- function(maf.cutoff){
+#     rem.snps <- read.table(sprintf("%s/snp_filt_metadata.txt", DATA.FOLDER), header=TRUE)
+#     filt.snps <- sapply(rem.snps[rem.snps$maf >=maf.cutoff,]$ID, as.character)
+
+#     # load other SNPs filtering data - X, XY, Y, MT
+#     alt_chr <- read.table(sprintf("%s/chr_qc/alt_chr_qc_table.txt", DATA.FOLDER), header=TRUE)
+#     filt.snps2 <- sapply(alt_chr[(alt_chr$keep==1 & alt_chr$MAF >=maf.cutoff),]$SNP, as.character)
+
+#     filt.snps.full <- c(filt.snps, filt.snps2)
+#     return(filt.snps.full)
+# }
 
 reformatData <- function(all.dat, trait.type, maf.cutoff=0.01){
 	
