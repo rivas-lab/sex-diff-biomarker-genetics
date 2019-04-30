@@ -168,7 +168,7 @@ extractData <- function(trait){
 
     # TODO - label these better
 
-    write.table(next.row, file=sprintf("%s/age_sex_meno/summary_dat_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE)
+    write.table(next.row, file=sprintf("%s/summary_dat_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE)
 }
 
 runM1(trait, trait.type)

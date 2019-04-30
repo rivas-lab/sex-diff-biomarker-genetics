@@ -17,7 +17,7 @@ filt.file <- read.delim(sprintf("%s/variant_filter_table.tsv.gz", FILTER_DIR))
 rem.snps <- filt.file[filt.file$all_filters==0,] # 655,654 out of 784,256
 
 # filter for ld - part of LD-pruned set
-rem.snps2 <- rem.snps[rem.snps$ld_indep=='True',] # 361,424
+rem.snps2 <- rem.snps[rem.snps$ld_indep,] # 361,424
 
 write.table(rem.snps2, sprintf("%s/snp_filt_metadata.txt", OUT_DIR))
 
