@@ -18,8 +18,17 @@ se.cutoff <- 0.2
 chrs <- c(1:22)
 
 calcLoglik <- FALSE
+biomarker = FALSE
 
-loadDat <- function(trait, trait.type){
+ndim <- 2
+ndim_to_prefixes <- list("2"=c("zerosex", "onesex"), 
+     "3"=c("pre_meno", "post_meno", "onesex"),
+     "4"=c("under65_f", "over65_f", "under65_m", "over65_m"))
+
+list.prefixes <- ndim_to_prefixes[[as.character(ndim)]]
+
+
+loadDatO <- function(trait, trait.type){
 	# function for loading the data
 
 	# load all the data
@@ -47,6 +56,25 @@ loadDat <- function(trait, trait.type){
 
     return(dat)
 }
+loadDat <- function(trait, trait.type){
+    
+
+    if (biomarker==TRUE){
+     list.ds <- lapply(c("female", "male"), function(sex) loadBiomarkerDat(trait, sex))
+    } else {
+    # for each trait
+    list.ds <- lapply(list.prefixes, function(prefix) {
+        all.dat <- do.call(rbind, lapply(chrs, function(chr) { getFile(prefix, chr, trait)}));
+        colnames(all.dat)[1:3] <- c("CHR", "BP", "SNP");
+        return(all.dat)
+    })
+    }
+
+    list.ds2 <- extractOverlappingRows(list.ds)
+
+    stan.obj <- extractDataStanMulti(list.ds2)
+    return(stan.obj)
+}
 
 
 
@@ -55,7 +83,7 @@ runM2 <- function(trait, trait.type){
 
     dat <- loadDat(trait, trait.type)
     dat$dat$K <- 4
-    save(dat, file=sprintf("%s/m2_v4/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/m2/dat_%s.RData", DATA.FOLDER, trait))
     if (calcLoglik==TRUE){
         model.file <- "models/model2_loglik.stan" # this is v2...
     } else {
@@ -68,7 +96,7 @@ runM2 <- function(trait, trait.type){
     print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/m2_v4/f_m2_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/m2/f_m2_%s.RData", DATA.FOLDER, trait))
 }
 
 runM2.a <- function(trait, trait.type){
@@ -90,7 +118,7 @@ runM2.a <- function(trait, trait.type){
     print(fit2, pars=c("pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/m2_v4/f_m2.a_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/m2/f_m2.a_%s.RData", DATA.FOLDER, trait))
 }
 
 
@@ -99,8 +127,8 @@ extractData <- function(trait){
 	print("Extracting")
     print(trait)
 
-	load(file=sprintf("%s/m2_v4/dat_%s.RData", DATA.FOLDER, trait)) 
-    load(file=sprintf("%s/m2_v4/f_m2_%s.RData", DATA.FOLDER, trait))
+	load(file=sprintf("%s/m2/dat_%s.RData", DATA.FOLDER, trait)) 
+    load(file=sprintf("%s/m2/f_m2_%s.RData", DATA.FOLDER, trait))
 
     # fraction in non-null component
     p <- getPi(fit2)
@@ -110,11 +138,11 @@ extractData <- function(trait){
     Sigma <- getSigma(fit2)
 
     #write.table(data.frame(t(c(trait, unlist(p), unlist(sigmasq))), 
-    #    file=sprintf("%s/m2_v2/%s_summary.txt", DATA.FOLDER, trait), quote=FALSE, row.names=FALSE))
+    #    file=sprintf("%s/m2/%s_summary.txt", DATA.FOLDER, trait), quote=FALSE, row.names=FALSE))
 
     # assign each SNP to a category
     posterior.df <- posteriorSNPtable(dat, fit2)
-    write.table(posterior.df, file=sprintf("%s/m2_v4/snp_table_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+    write.table(posterior.df, file=sprintf("%s/m2/snp_table_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
     print("Posterior table generated")
 
     # remove large files from the workspace
@@ -137,8 +165,8 @@ extractData <- function(trait){
     snp.tab <- sexSpecSNPtables(posterior.df, filt.f, filt.m) #sexSpecSNPtables(posterior.df$SNP, filt.f, filt.m, posterior.df$category)
     f.tab <- annotateSNP(snp.tab$'1')
     m.tab <- annotateSNP(snp.tab$'2')
-	write.table(f.tab, file=sprintf("%s/m2_v4/f_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
-	write.table(m.tab, file=sprintf("%s/m2_v4/m_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+	write.table(f.tab, file=sprintf("%s/m2/f_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+	write.table(m.tab, file=sprintf("%s/m2/m_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
 }
 
 

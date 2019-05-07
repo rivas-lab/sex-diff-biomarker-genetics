@@ -15,7 +15,8 @@ require('rstan')
 BINARY.SE.CUTOFF <- 1 ## might want to adjust
 QUANT.SE.CUTOFF <- 0.2
 
-GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/age_sex_meno/"
+GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/age_sex_meno/" # TODO - update
+#GWAS.FOLDER <- "/oak/stanford/groups/mrivas/projects/biomarkers/results/plink/combined" # for biomarker data
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
@@ -64,13 +65,13 @@ getFile <- function(dat.source, chr, field){
 
     # select only the rows with the additive model
     dat.1 <- dat[dat$TEST == "ADD",]
-    rownames(dat.1) <- dat.1$SNP
+    rownames(dat.1) <- dat.1$ID
 
     # remove NAs
     dat.2 <- dat.1[!is.na(dat.1$SE),]
 
     # SE filter
-    dat.3 <- dat.2[dat.2$SE > QUANT.SE.CUTOFF,]
+    dat.3 <- dat.2[dat.2$SE < QUANT.SE.CUTOFF,]
 
     # MAF filter
     dat.4 <- dat.3[dat.3$ID %in% snps.to.keep$V1,]

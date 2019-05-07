@@ -7,7 +7,7 @@
 #SBATCH --array=1-2
 #SBATCH --mem=50000
 
-module load R/3.3.0
+ml r-rstan
 
 trait=$1
 trait_type=$2

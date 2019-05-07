@@ -40,6 +40,8 @@ if (length(args) > 4){
     downsampled <- args[5]
 } else { downsampled <- FALSE }
 
+biomarker <- args[6]
+
 maf.cutoff <- 0.01
 se.cutoff <- 0.2
 
@@ -62,7 +64,7 @@ print(sprintf("Running M1 for trait %s with %s dim, %s, with prefixes %s", trait
 #print(sprintf("Running M1 for trait %s with MAF cutoff and SE cutoff %s.", trait, maf.cutoff, se.cutoff))
 
 #snps.to.keep <- filterMAF(maf.cutoff)
-biomarker = FALSE
+
 
 loadBiomarkerDat <- function(trait, sex){
   dir <- "/oak/stanford/groups/mrivas/projects/biomarkers/results/plink/combined"
@@ -71,7 +73,7 @@ loadBiomarkerDat <- function(trait, sex){
 
    # select only the rows with the additive model
     dat.1 <- dat[dat$TEST == "ADD",]
-    rownames(dat.1) <- dat.1$ID
+    
 
     # remove NAs
     dat.2 <- dat.1[!is.na(dat.1$SE),]
@@ -82,6 +84,7 @@ loadBiomarkerDat <- function(trait, sex){
     # MAF filter
     dat.4 <- dat.3[dat.3$ID %in% snps.to.keep$V1,]
     colnames(dat.4)[1:3] <- c("CHR", "BP", "SNP")
+    rownames(dat.4) <- dat.4$SNP
 
     return(dat.4)
 }
