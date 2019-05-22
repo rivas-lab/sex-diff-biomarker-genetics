@@ -19,7 +19,7 @@ if [ $# -lt 7 ] ; then threads=8 ; else threads=$7 ; fi
 UKB_app_id=$1
 
 target=/oak/stanford/groups/mrivas/ukbb/24983
-outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/age_sex_meno
+outDir=/scratch/PI/mrivas/users/erflynn/sex_div_gwas/biomarker_gwas/
 if [ ! -d $outDir ] ; then mkdir -p $outDir ; fi
 
 # which sex to analyze
@@ -49,7 +49,7 @@ flipfix_script=/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/ukbb24
 bed=$target/cal/pgen/ukb24983_cal_chr${N}_v2.bed
 bim=$target/snp/snp_download/ukb_snp_chr${N}_v2.bim
 fam=$target/fam/ukb2498_cal_v2_s488370_withoutBatch.fam
-covar=$target/phe_qc/ukb24983_GWAS_covar.phe
+covar=$target/sqc/ukb24983_GWAS_covar.phe
 #sampleqc=$target/phe/ukb24983_remove.phe
 #reducted=$target/phe/w2498_20170726.phe
 navars=$target/cal/gwas/na.vars.list # variants only on one array

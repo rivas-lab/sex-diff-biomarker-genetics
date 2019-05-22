@@ -18,7 +18,7 @@ DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
 # PARSE ARGUMENTS
-args = commandArgs(trailingOnly=TRUE) # 1, 2, or 3 (2-alt)
+args = commandArgs(trailingOnly=TRUE) # 1, 2, or 3 
 
 model <- as.numeric(args[1])
 #if (!model %in% c(1,2,3)){ stop ("please specify a model (1,2,or 3) for the first argument") }
@@ -40,8 +40,8 @@ if (length(args) > 4){
     downsampled <- args[5]
 } else { downsampled <- FALSE }
 
-biomarker <- args[6]
-
+#biomarker <- args[6]
+biomarker <- FALSE
 maf.cutoff <- 0.01
 se.cutoff <- 0.2
 

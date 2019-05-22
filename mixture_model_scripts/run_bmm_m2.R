@@ -10,7 +10,7 @@ trait.type <- args[3] # binary or quant
 source('model_utils.R')
 #source('heritability_utils.R')
 source('snp_utils.R')
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
+DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/biomarker/"
 
 
 maf.cutoff <- 0.01 
@@ -37,7 +37,7 @@ loadDatO <- function(trait, trait.type){
 	} 
 	if (trait.type == 'quant') {
 		#all.dat <- lapply(c(1:22, "X", "XY"), function(x){ getDataQuant(as.character(x), trait)})
-		all.dat <- lapply(chrs, function(x){ getDataQuant(as.character(x), trait)})
+		#all.dat <- lapply(chrs, function(x){ getDataQuant(as.character(x), trait)})
 
 	}
 

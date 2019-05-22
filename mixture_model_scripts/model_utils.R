@@ -15,7 +15,7 @@ require('rstan')
 BINARY.SE.CUTOFF <- 1 ## might want to adjust
 QUANT.SE.CUTOFF <- 0.2
 
-GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/age_sex_meno/" # TODO - update
+GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/biomarker_gwas/" # TODO - update
 #GWAS.FOLDER <- "/oak/stanford/groups/mrivas/projects/biomarkers/results/plink/combined" # for biomarker data
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 

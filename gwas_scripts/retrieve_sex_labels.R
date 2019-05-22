@@ -5,7 +5,7 @@
 # Code to retrieve sex labels for IDs. 
 # Retrieves sex labels and then filters to remove 151k individuals not included in the analysis. 
 
-COVARIATE_MATRIX <- '/scratch/PI/mrivas/ukbb/24983/phe/ukb24983_GWAS_covar.phe'
+COVARIATE_MATRIX <- '/oak/stanford/groups/mrivas/ukbb24983/sqc/ukb24983_GWAS_covar.phe'
 PHE_OUT_DIR <- '/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phefiles'
 
 # read in covariate matrix
@@ -13,10 +13,10 @@ cov_mat <- read.table(COVARIATE_MATRIX, header=TRUE)
 cov_mat_sm <- cov_mat[,c("IID", "sex")]
 
 # Filter out 151k sqc individuals
-removal_file_one <- '/scratch/PI/mrivas/ukbb/24983/phe/ukb24983_remove.phe'
-removal_file_two <- '/scratch/PI/mrivas/ukbb/24983/phe/w2498_20170726.phe'
+removal_file_one <- '/oak/stanford/groups/mrivas/ukbb/24983/sqc/ukb24983_remove.phe'
+removal_file_two <- '/oak/stanford/groups/mrivas/ukbb/24983/sqc/w24983_20181016.csv'
 remove1 <- read.table(removal_file_one, header=FALSE)
-remove2 <- read.table(removal_file_two, header=FALSE) # this file is messy b/c of meta characters - only has three people in it tho
+remove2 <- read.table(removal_file_two, header=FALSE) 
 ids.to.remove <- c(remove1[,1], unique(remove2[,1]))
 cov_mat_filt <- cov_mat_sm[!(cov_mat_sm$IID %in% ids.to.remove),]
 

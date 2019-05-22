@@ -11,9 +11,9 @@ Run this once to gather sex labels and filter:
 
 Here are the scripts I ran. For now, I am just testing using BMI.
 
-First I set up IDs for the phenotype.
 
-```Rscript map_phe_ids.R 21001.phe 21001```
+
+
 
 Then, to run GWAS:
 
@@ -37,3 +37,6 @@ Binary phenotypes
 Then, to run GWAS, do same as above, but use:
 
 ```submit_gwas_run_bin.sh```
+
+
+[deprecated: `map_phe_ids.R`: for mapping btw different versions]
