@@ -8,7 +8,7 @@
 args <- commandArgs(trailingOnly=TRUE)
 trait <- args[1]
 
-GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/results_test/"
+GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/biomarker_gwas/"
 
 
 fileChecks <- function(file.f, file.m, chr, field){

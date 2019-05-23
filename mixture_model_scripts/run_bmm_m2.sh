@@ -2,9 +2,9 @@
 #SBATCH --job-name=run_m2
 #SBATCH --output=logs/run_m2_%a_%A.out
 #SBATCH --error=logs/run_m2_%a_%A.err
-#SBATCH --time=30:00:00
+#SBATCH --time=48:00:00
 #SBATCH --partition=rbaltman
-#SBATCH --array=1-2
+#SBATCH --array=2
 #SBATCH --mem=50000
 
 ml r-rstan
