@@ -63,8 +63,10 @@ fi ; done
 
 
 out="$outDir/ukb${UKB_app_id}_v2_c${N}.${phen}.${sex}"
-out_suffix="PHENO1.glm.linear.gz.tbi"
-out_renamed="$outDir/ukb${UKB_app_id}_v2.${phen}.${sex}.PHENO1_c${N}.glm.linear.gz.tbi"
+#out_suffix="PHENO1.glm.linear.gz.tbi"
+out_suffix="${phen}.glm.linear.gz.tbi"
+#out_renamed="$outDir/ukb${UKB_app_id}_v2.${phen}.${sex}.PHENO1_c${N}.glm.linear.gz.tbi"
+out_renamed="$outDir/ukb${UKB_app_id}_v2.${phen}.${sex}.${phen}_c${N}.glm.linear.gz.tbi"
 
 # check if the out file exist
 for outfile in ${out}.${out_suffix%.gz.tbi} ${out}.${out_suffix%.gz.tbi} ${out_renamed} ; do
