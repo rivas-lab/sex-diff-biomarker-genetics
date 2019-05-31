@@ -20,7 +20,7 @@ trait.idx <- as.numeric(args[1])
 
 biomarker <- read.table("/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phe_extraction/list_biomarker.txt", header=TRUE, stringsAsFactors=FALSE)
 
-list.traits <- biomarker$Field
+list.traits <- sapply(biomarker$name, function(x) {y <- str_trim(x); z <- gsub(" |-", "_", y); z})
 exists <- sapply(list.traits, function(trait) file.exists(sprintf("%s/summary_dat_%s_2_.txt",DATA.FOLDER,trait)))
 #list.traits[!exists]  # which failed - check+re-run?
 
@@ -87,6 +87,6 @@ calcErrBarsHerit <- function(trait){
 
 
 list.tab <- lapply(selected.traits, function(x) tryCatch({calcErrBarsHerit(x)}, error=function(e){print(x)}))
-save(list.tab, file="sprintf("%s/herit/errorBars_%s.RData", DATA.FOLDER, trait.idx))
+save(list.tab, file=sprintf("%s/herit/errorBars_%s.RData", DATA.FOLDER, trait.idx))
 full.tab <- do.call(rbind, list.tab)
 write.table(full.tab, file=sprintf("%s/herit/errorBars_%s.txt", DATA.FOLDER, trait.idx), row.names=FALSE, col.names=FALSE)

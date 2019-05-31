@@ -1,25 +1,33 @@
-
-
-require('rstan')
-require('ggplot2')
-require('tidyverse')
-require('reshape2')
 source('model_utils.R')
+#source('heritability_utils.R')
 source('snp_utils.R')
+require('stringr')
+DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
-DATA.FOLDER2 <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/biomarker/m2"
+extractSNPcat <- function(snp.df, df.f, df.m, category, trait){
+    comp4 <- snp.df[which(snp.df$category==category),c("p1", "p2", "p3", "p4", "SNP")]
+    if (length(comp4$SNP) > 0){
+            both.snps <- cbind(df.f[df.f$SNP %in% comp4$SNP ,c("SNP", "CHR", "BP", "BETA","SE", "P")], 
+             df.m[df.m$SNP %in% comp4$SNP,c("BETA","SE", "P")])
+            colnames(both.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
+            both.snp.df <- both.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
+            both.snp.df <- merge(both.snp.df, comp4, by="SNP")       
+    }   
+    both.snp.df2 <- annotateSNP(both.snp.df)
 
-biomarker <- read.table("/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phe_extraction/list_biomarker.txt", header=TRUE, stringsAsFactors=FALSE)
+    write.table(both.snp.df2, file=sprintf("%s/biomarker/m2/snps%s_%s.txt", DATA.FOLDER, category, trait), row.names=FALSE)
 
-list.traits <- biomarker$Field
-#m2exists <- sapply(list.traits, function(trait) file.exists(sprintf("%s/snp_table_%s.txt",DATA.FOLDER2,trait)))
-#list.traits2 <- list.traits[!m2exists]
-print(list.traits)
+
+}
 
 extractSNP <- function(trait){
-     snp.df <- read.table(sprintf("%s/snp_table_%s.txt",DATA.FOLDER2, trait), header=TRUE, stringsAsFactors=FALSE)
-    cat.count <- table(snp.df$category)
-    if ("2" %in% names(cat.count) | "3" %in% names(cat.count)){
+
+	 res = tryCatch({
+snp.df <- read.delim(sprintf("%s/biomarker/m2/snp_table_%s.txt", DATA.FOLDER, trait), header=TRUE, sep=" ")
+print(trait)
+cat.count <- table(snp.df$category)
+print(cat.count)
+    if ("2" %in% names(cat.count) | "3" %in% names(cat.count) | "4" %in% names(cat.count)){
         print(trait)
         print(cat.count)
         list.prefixes <- c("zerosex", "onesex")
@@ -31,17 +39,38 @@ extractSNP <- function(trait){
             })
 
         list.ds2 <- extractOverlappingRows(list.ds)
-        filt.f <- list.ds2[[1]]
-        filt.m <- list.ds2[[2]]
-
-        snp.tab <- sexSpecSNPtables( filt.f, filt.m, snp.df) 
-        f.tab <- annotateSNP(snp.tab$'1')
-        m.tab <- annotateSNP(snp.tab$'2')
-        write.table(f.tab, file=sprintf("%s/f_spec_%s.txt", DATA.FOLDER2, trait), row.names=FALSE)
-        write.table(m.tab, file=sprintf("%s/m_spec_%s.txt", DATA.FOLDER2, trait), row.names=FALSE)
+	df.f <- list.ds2[[1]]
+	df.m <- list.ds2[[2]]
+    print("Extracting")
+    extractSNPcat(snp.df, df.f, df.m, 2, trait)
+    extractSNPcat(snp.df, df.f, df.m, 3, trait)
+    extractSNPcat(snp.df, df.f, df.m, 4, trait)
     } else {
         print(sprintf("No sex-specific SNPs for %s", trait))
     }
+}, error = function(err) {
+   print(sprintf("Error for %s", trait))
+})
+
 }
 
-sapply(list.traits, extractSNP)
+args <- commandArgs(trailingOnly=TRUE)
+trait.idx <- as.numeric(args[1])
+biomarker <- read.table("/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phe_extraction/list_biomarker.txt", header=TRUE, stringsAsFactors=FALSE)
+
+list.traits <- sapply(biomarker$name, function(x) {y <- str_trim(x); z <- gsub(" |-", "_", y); z})
+#exists <- sapply(list.traits, function(trait) file.exists(sprintf("%s/summary_dat_%s_2_.txt",DATA.FOLDER,trait)))
+#list.traits[!exists]  # which failed - check+re-run?
+
+list.traits2 <- list.traits #[exists]
+
+NUM.BLOCK <- 6
+if (trait.idx == length(list.traits2)/NUM.BLOCK){
+   selected.traits <- list.traits2[((trait.idx-1)*NUM.BLOCK):length(list.traits2)]
+} else{
+   selected.traits <- list.traits2[((trait.idx-1)*NUM.BLOCK):((trait.idx)*NUM.BLOCK)]
+
+}
+
+
+lapply(selected.traits, extractSNP)

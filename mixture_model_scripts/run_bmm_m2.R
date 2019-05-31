@@ -18,7 +18,7 @@ se.cutoff <- 0.2
 chrs <- c(1:22)
 
 calcLoglik <- FALSE
-biomarker = FALSE
+
 
 ndim <- 2
 ndim_to_prefixes <- list("2"=c("zerosex", "onesex"), 
@@ -27,48 +27,18 @@ ndim_to_prefixes <- list("2"=c("zerosex", "onesex"),
 
 list.prefixes <- ndim_to_prefixes[[as.character(ndim)]]
 
-
-loadDatO <- function(trait, trait.type){
-	# function for loading the data
-
-	# load all the data
-	if (trait.type == 'binary'){
-		all.dat <- lapply(chrs, function(x){ getDataBin(as.character(x), trait)})
-	} 
-	if (trait.type == 'quant') {
-		#all.dat <- lapply(c(1:22, "X", "XY"), function(x){ getDataQuant(as.character(x), trait)})
-		#all.dat <- lapply(chrs, function(x){ getDataQuant(as.character(x), trait)})
-
-	}
-
-	# reformat data, remove rows that are not shared
-    dat.reform <- reformatData(all.dat, trait.type, maf.cutoff)
-    filt.f <- dat.reform$`1`
-    filt.m <- dat.reform$`2`
-
-    # filter by standard error
-    dat.filt <- filterSE(filt.f, filt.m, trait.type, cutoff=se.cutoff)
-    filt.f <- dat.filt$`1`
-    filt.m <- dat.filt$`2`
-
-    # extract dat in a format for stan input
-    dat <- extractDataStan(filt.f, filt.m)
-
-    return(dat)
-}
 loadDat <- function(trait, trait.type){
     
 
-    if (biomarker==TRUE){
-     list.ds <- lapply(c("female", "male"), function(sex) loadBiomarkerDat(trait, sex))
-    } else {
+
     # for each trait
     list.ds <- lapply(list.prefixes, function(prefix) {
         all.dat <- do.call(rbind, lapply(chrs, function(chr) { getFile(prefix, chr, trait)}));
         colnames(all.dat)[1:3] <- c("CHR", "BP", "SNP");
         return(all.dat)
     })
-    }
+
+    
 
     list.ds2 <- extractOverlappingRows(list.ds)
 
@@ -122,6 +92,24 @@ runM2.a <- function(trait, trait.type){
 }
 
 
+
+extractSNPcat <- function(snp.df, df.f, df.m, category, trait){
+    comp4 <- snp.df[which(snp.df$category==category),c("p1", "p2", "p3", "p4", "SNP")]
+    if (length(comp4$SNP) > 0){
+            both.snps <- cbind(df.f[df.f$SNP %in% comp4$SNP ,c("SNP", "CHR", "BP", "BETA","SE", "P")], 
+             df.m[df.m$SNP %in% comp4$SNP,c("BETA","SE", "P")])
+            colnames(both.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
+            both.snp.df <- both.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
+            both.snp.df <- merge(both.snp.df, comp4, by="SNP")       
+    }   
+    both.snp.df2 <- annotateSNP(both.snp.df)
+
+    write.table(both.snp.df2, file=sprintf("%s/m2/snps%s_%s.txt", DATA.FOLDER, category, trait), row.names=FALSE)
+
+
+}
+
+
 ### post-processing
 extractData <- function(trait){
 	print("Extracting")
@@ -149,24 +137,33 @@ extractData <- function(trait){
 	rm(fit2)
     rm(dat)
 
-    # assumes quant
-	all.dat <- lapply(chrs, function(x){ getDataQuant(as.character(x), trait)})
 
-	# reformat data, remove rows that are not shared
-    dat.reform <- reformatData(all.dat, trait.type, maf.cutoff)
-    filt.f <- dat.reform$`1`
-    filt.m <- dat.reform$`2`
+    snp.df <- posterior.df
 
-    # filter by standard error
-    dat.filt <- filterSE(filt.f, filt.m, trait.type, cutoff=se.cutoff)
-    filt.f <- dat.filt$`1`
-    filt.m <- dat.filt$`2`
+  cat.count <- table(snp.df$category)
+    if ("2" %in% names(cat.count) | "3" %in% names(cat.count) | "4" %in% names(cat.count)){
+        print(trait)
+        print(cat.count)
+        list.prefixes <- c("zerosex", "onesex")
+        chrs <- c(1:22)
+        list.ds <- lapply(list.prefixes, function(prefix) {
+                all.dat <- do.call(rbind, lapply(chrs, function(chr) { getFile(prefix, chr, trait)}));
+                colnames(all.dat)[1:3] <- c("CHR", "BP", "SNP");
+                return(all.dat)
+            })
 
-    snp.tab <- sexSpecSNPtables(posterior.df, filt.f, filt.m) #sexSpecSNPtables(posterior.df$SNP, filt.f, filt.m, posterior.df$category)
-    f.tab <- annotateSNP(snp.tab$'1')
-    m.tab <- annotateSNP(snp.tab$'2')
-	write.table(f.tab, file=sprintf("%s/m2/f_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
-	write.table(m.tab, file=sprintf("%s/m2/m_spec_snp_tab_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+        list.ds2 <- extractOverlappingRows(list.ds)
+	df.f <- list.ds2[[1]]
+	df.m <- list.ds2[[2]]
+
+	extractSNPcat(snp.df, df.f, df.m, 2, trait)
+	extractSNPcat(snp.df, df.f, df.m, 3, trait)
+	extractSNPcat(snp.df, df.f, df.m, 4, trait)
+    } else {
+        print(sprintf("No sex-specific SNPs for %s", trait))
+    }
+
+
 }
 
 
