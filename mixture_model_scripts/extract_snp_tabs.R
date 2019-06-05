@@ -12,10 +12,11 @@ extractSNPcat <- function(snp.df, df.f, df.m, category, trait){
             colnames(both.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
             both.snp.df <- both.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
             both.snp.df <- merge(both.snp.df, comp4, by="SNP")       
-    }   
     both.snp.df2 <- annotateSNP(both.snp.df)
 
     write.table(both.snp.df2, file=sprintf("%s/biomarker/m2/snps%s_%s.txt", DATA.FOLDER, category, trait), row.names=FALSE)
+
+    }   
 
 
 }
@@ -50,6 +51,7 @@ print(cat.count)
     }
 }, error = function(err) {
    print(sprintf("Error for %s", trait))
+   print(err)
 })
 
 }

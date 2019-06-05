@@ -10,7 +10,7 @@ trait.type <- args[3] # binary or quant
 source('model_utils.R')
 #source('heritability_utils.R')
 source('snp_utils.R')
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/biomarker/"
+DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
 maf.cutoff <- 0.01 
@@ -53,7 +53,7 @@ runM2 <- function(trait, trait.type){
 
     dat <- loadDat(trait, trait.type)
     dat$dat$K <- 4
-    save(dat, file=sprintf("%s/m2/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/biomarker/m2/dat_%s.RData", DATA.FOLDER, trait))
     if (calcLoglik==TRUE){
         model.file <- "models/model2_loglik.stan" # this is v2...
     } else {
@@ -66,7 +66,7 @@ runM2 <- function(trait, trait.type){
     print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/m2/f_m2_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/biomarker/m2/f_m2_%s.RData", DATA.FOLDER, trait))
 }
 
 runM2.a <- function(trait, trait.type){
@@ -88,7 +88,7 @@ runM2.a <- function(trait, trait.type){
     print(fit2, pars=c("pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/m2/f_m2.a_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/biomarker/m2/f_m2.a_%s.RData", DATA.FOLDER, trait))
 }
 
 
@@ -101,10 +101,11 @@ extractSNPcat <- function(snp.df, df.f, df.m, category, trait){
             colnames(both.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
             both.snp.df <- both.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
             both.snp.df <- merge(both.snp.df, comp4, by="SNP")       
-    }   
     both.snp.df2 <- annotateSNP(both.snp.df)
 
-    write.table(both.snp.df2, file=sprintf("%s/m2/snps%s_%s.txt", DATA.FOLDER, category, trait), row.names=FALSE)
+    write.table(both.snp.df2, file=sprintf("%s/biomarker/m2/snps%s_%s.txt", DATA.FOLDER, category, trait), row.names=FALSE)
+
+    }   
 
 
 }
@@ -115,8 +116,8 @@ extractData <- function(trait){
 	print("Extracting")
     print(trait)
 
-	load(file=sprintf("%s/m2/dat_%s.RData", DATA.FOLDER, trait)) 
-    load(file=sprintf("%s/m2/f_m2_%s.RData", DATA.FOLDER, trait))
+	load(file=sprintf("%s/biomarker/m2/dat_%s.RData", DATA.FOLDER, trait)) 
+    load(file=sprintf("%s/biomarker/m2/f_m2_%s.RData", DATA.FOLDER, trait))
 
     # fraction in non-null component
     p <- getPi(fit2)
@@ -126,11 +127,11 @@ extractData <- function(trait){
     Sigma <- getSigma(fit2)
 
     #write.table(data.frame(t(c(trait, unlist(p), unlist(sigmasq))), 
-    #    file=sprintf("%s/m2/%s_summary.txt", DATA.FOLDER, trait), quote=FALSE, row.names=FALSE))
+    #    file=sprintf("%s/biomarker/m2/%s_summary.txt", DATA.FOLDER, trait), quote=FALSE, row.names=FALSE))
 
     # assign each SNP to a category
     posterior.df <- posteriorSNPtable(dat, fit2)
-    write.table(posterior.df, file=sprintf("%s/m2/snp_table_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+    write.table(posterior.df, file=sprintf("%s/biomarker/m2/snp_table_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
     print("Posterior table generated")
 
     # remove large files from the workspace
