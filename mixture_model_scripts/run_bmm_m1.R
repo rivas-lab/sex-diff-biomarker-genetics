@@ -60,38 +60,12 @@ if (downsampled==TRUE){
 downsampled_str <- ifelse(downsampled, "downsampled", "")
 print(sprintf("Running M1 for trait %s with %s dim, %s, with prefixes %s", trait, ndim, downsampled_str, paste(list.prefixes, collapse=" ")))
 
-### generate a log file
-#print(sprintf("Running M1 for trait %s with MAF cutoff and SE cutoff %s.", trait, maf.cutoff, se.cutoff))
-
-#snps.to.keep <- filterMAF(maf.cutoff)
 
 
-loadBiomarkerDat <- function(trait, sex){
-  dir <- "/oak/stanford/groups/mrivas/projects/biomarkers/results/plink/combined"
-  file.path <- sprintf("%s/%s_%s.glm.linear.gz", dir, trait, sex)
-  dat <- fread(file.path, data.table=FALSE)
 
-   # select only the rows with the additive model
-    dat.1 <- dat[dat$TEST == "ADD",]
-    
-
-    # remove NAs
-    dat.2 <- dat.1[!is.na(dat.1$SE),]
-
-    # SE filter
-    dat.3 <- dat.2[dat.2$SE < QUANT.SE.CUTOFF,]
-
-    # MAF filter
-    dat.4 <- dat.3[dat.3$ID %in% snps.to.keep$V1,]
-    colnames(dat.4)[1:3] <- c("CHR", "BP", "SNP")
-    rownames(dat.4) <- dat.4$SNP
-
-    return(dat.4)
-}
 
 loadDat <- function(trait, trait.type){
     
-
     if (biomarker==TRUE){
      list.ds <- lapply(c("female", "male"), function(sex) loadBiomarkerDat(trait, sex))
     } else {
@@ -145,28 +119,69 @@ extractData <- function(trait){
     # assign each SNP to a component, estimate heritability
     dat <- labelCategories(dat, m1.Sigma, m1.pi) # label the SNPs with heritability
     h <- overallHeritability(dat, m1.Sigma, m1.pi)
-    #hx <- getPlotHeritabilities(dat, m1.Sigma, trait)
-
-
-    # estimate x, xy chromosome contributions to heritability
-    #h.x <- getChrHeritability(dat, m1.Sigma, m1.pi, "X", trait)
-    #h.xy <- getChrHeritability(dat, m1.Sigma, m1.pi, "XY", trait)
-    #h.auto <- getChrHeritability(dat, m1.Sigma, m1.pi, "autosomal", trait)
+   
 
     # write out the data
     next.row <- data.frame(t(c(trait, dat$dat$N, unlist(m1.pi), unlist(m1.Sigma), unlist(rg), unlist(rg.c$l), unlist(rg.c$u), unlist(h))))
-        #unlist(h.x), unlist(h.xy), unlist(h.auto))))
-    #col.labels <- c("trait", "N", "pi[1]", "pi[2]", "Sigma[1,1]", "Sigma[1,2]", "Sigma[2,1]", "Sigma[2,2]", 
-    #    "rg", "rg.l", "rg.u", "h") #, "h.x.f", "h.x.m", "h.xy.f", "h.xy.m", "h.auto.f", "h.auto.m")
-    #colnames(next.row) <- col.labels
 
     # TODO - label these better
 
     write.table(next.row, file=sprintf("%s/biomarker/summary_dat_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE)
 }
 
+calcErrBarsHerit <- function(trait){
+    fit.file=sprintf("%s/f_%s.RData", DATA.FOLDER, trait)
+    if (!file.exists(fit.file)){
+            df <- data.frame(t(c("NA", trait, "NA", "NA")))
+            colnames(df) <- c("value", "trait", "int", "sex")
+            return(df)
+
+        }
+        load(file=fit.file)
+        load(file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait))
+
+        # extract all estimate
+        list_of_draws <- rstan::extract(fit1)
+        pi.draws <- list_of_draws$pi
+        p <- pi.draws
+        s.draws <- list_of_draws$Sigma
+        Sigma <- s.draws
+
+        # extract lower + upper pi
+        ordered.p <- p[order(p[,2]),] # ordering p by the non-null component 
+        p.lower <- ordered.p[0.125*nrow(ordered.p),]
+        p.upper <- ordered.p[0.975*nrow(ordered.p),]
+
+        # extract lower + upper sigma
+        ordered.S <- Sigma[order(Sigma[,1,1]),,]
+        s.upper <- ordered.S[0.975*dim(Sigma)[1],,]
+        s.lower <- ordered.S[0.125*dim(Sigma)[1],,]
+
+        # recalculate SNP membership
+        dat2 <- dat
+        dat2$categories <- NULL
+        dat.u <- labelCategories(dat2, s.upper, p.upper)
+        dat.l <- labelCategories(dat2, s.lower, p.lower)
+
+        h.up <- overallHeritability(dat.u, s.upper, p.upper)
+        h.low <- overallHeritability(dat.l, s.lower, p.lower)
+        res <- list("up"=h.up, "low"=h.low)
+
+        # reformat into data frame
+
+     my.df <- cbind(t(as.data.frame(res)), trait)
+        my.df2 <- data.frame(cbind(my.df, rownames(my.df)))
+
+    colnames(my.df2) <- c("hf", "hm", "trait", "int")
+    my.df3 <- melt(my.df2, id.vars=c("trait", "int"), variable.name="sex")
+         rownames(my.df3) <- NULL
+	write.table(my.df3, file=sprintf("%s/biomarker/h_err_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE, sep="\t")
+    return(my.df3)
+    }
+
+
 runM1(trait, trait.type)
 extractData(trait)
-
+calcErrBarsHerit(trait)
 
 
