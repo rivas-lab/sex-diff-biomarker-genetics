@@ -56,7 +56,15 @@ loadDat <- function(trait, trait.type){
        colnames(both.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
 
        filt <- filter(both.snps,(p_f < 10**-2) | (p_m < 10**-2))
-       list.filt <- list("1"=filter(df.f, SNP %in% filt$SNP), "2"=filter(df.m, SNP %in% filt$SNP))
+       null <- filter(both.snps,(p_f > 10**-2) & (p_m > 10**-2))
+
+       num_null <- ceiling((nrow(filt)/0.8)*0.2)
+       print(num_null)
+
+       null_sel <- null[sample(nrow(null), num_null, replace=FALSE),]
+       list_snps <- c(null_sel$SNP, filt$SNP)
+       list.filt <- list("1"=filter(df.f, SNP %in% list_snps), "2"=filter(df.m, SNP %in% list_snps))
+
        list.ds2 <- list.filt
 
 
@@ -254,6 +262,128 @@ extractData <- function(trait, model_num=2){
 }
 
 
+#### <---- M4 SNP extraction ----> ####
+require('stringr')
+
+require('tidyverse')
+
+
+require('mnormt')
+computePosterior4 <- function(B, SE, p, Sigmas){
+
+    zeros <- c(0,0)
+    SE_mat <- matrix(c(SE[1], 0, 0, SE[2]), 2, 2)
+
+    post_vec <- sapply(1:6, function(i){
+     p[i]*dmnorm(B, zeros, SE_mat + Sigmas[i,,])
+    })
+    p_tot <- sum(post_vec)
+    prob_vec <- sapply(post_vec, function(x) exp(log(x)-log(p_tot)))
+    return(list(unlist(prob_vec)))
+}
+
+
+
+extractSNPcat4 <- function(snp.df, df.f, df.m, category, trait){
+    comp4 <- snp.df[which(snp.df$category==category),c("p1", "p2", "p3", "p4","p5", "p6", "SNP")]
+    if (length(comp4$SNP) > 0){
+            both.snps <- cbind(df.f[df.f$SNP %in% comp4$SNP ,c("SNP", "CHR", "BP", "BETA","SE", "P")], 
+             df.m[df.m$SNP %in% comp4$SNP,c("BETA","SE", "P")])
+            colnames(both.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
+            both.snp.df <- both.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
+            both.snp.df <- merge(both.snp.df, comp4, by="SNP")       
+    both.snp.df2 <- annotateSNP(both.snp.df)
+    
+
+
+    write.table(both.snp.df2, file=sprintf("%s/biomarker/m4/%s_cat%s.txt", DATA.FOLDER, trait, category), row.names=FALSE, sep="\t")
+        }
+}
+
+
+getSNPdf <- function(dat, fit){
+    sigmas_list <- summary(fit, pars=c("Sigmas"))$summary[,c("mean")]
+ 
+    p <- getPi(fit)
+
+
+    Sigmas <- array(sigmas_list, dim=c(6, 2, 2))
+    Sigmas[1,,] <- matrix(sigmas_list[1:4])
+    Sigmas[2,,] <- matrix(sigmas_list[5:8])
+    Sigmas[3,,] <- matrix(sigmas_list[9:12])
+    Sigmas[4,,] <- matrix(sigmas_list[13:16])
+    Sigmas[5,,] <- matrix(sigmas_list[17:20])
+    Sigmas[6,,] <- matrix(sigmas_list[21:24])
+
+ 
+ B.dat <- dat$dat$B
+    SE.dat <- dat$dat$SE
+    N <- dat$dat$N
+   
+    posteriors <- lapply(1:N, function(i) computePosterior4(B.dat[i,], SE.dat[i,], p, Sigmas))
+    posterior.df <- data.frame(do.call(rbind, posteriors))
+colnames(posterior.df) <- c("col")
+post2 <- data.frame(separate(posterior.df, col, c("p1", "p2", "p3", "p4", "p5", "p6"), sep=","))
+
+      
+post2$p1 <- sapply(post2$p1, function(x) strsplit(x, "(", fixed=TRUE)[[1]][[2]])
+post2$p6 <- sapply(post2$p6, function(x) strsplit(x, ")", fixed=TRUE)[[1]][[1]])
+
+     # assign to the category with the maximum posterior
+     post2$category <- data.frame(apply(post2, 1, function(x){
+            return(which.max(x))
+            }))
+
+            post2$SNP <- dat$snp
+            return(post2)
+
+}
+
+extractDataM4 <- function(trait){
+
+     res = tryCatch({
+
+        print(trait)
+    load(sprintf("%s/biomarker/m4/dat_%s.RData", DATA.FOLDER, trait))   
+    load(sprintf("%s/biomarker/m4/f_m2_%s.RData", DATA.FOLDER, trait))
+    print("loaded")
+    snp.df <- getSNPdf(dat, fit2)
+        print("snp df obtained")
+    list.prefixes <- c("zerosex", "onesex")
+        chrs <- c(1:22)
+        list.ds <- lapply(list.prefixes, function(prefix) {
+                all.dat <- do.call(rbind, lapply(chrs, function(chr) { getFile(prefix, chr, trait)}));
+                colnames(all.dat)[1:3] <- c("CHR", "BP", "SNP");
+                return(all.dat)
+            })
+
+        list.ds2 <- extractOverlappingRows(list.ds)
+    df.f <- list.ds2[[1]]
+    df.m <- list.ds2[[2]]
+
+
+
+
+
+ 
+    print("Extracting")
+    extractSNPcat4(snp.df, df.f, df.m, 2, trait)
+    extractSNPcat4(snp.df, df.f, df.m, 3, trait)
+    extractSNPcat4(snp.df, df.f, df.m, 4, trait)
+    extractSNPcat4(snp.df, df.f, df.m, 5, trait)    
+    extractSNPcat4(snp.df, df.f, df.m, 6, trait)
+
+}, error = function(err) {
+   print(sprintf("Error for %s", trait))
+   print(err)
+})
+
+}
+#### <--------> ####
+
+
+
+
 
 if (model==2){
 	runM2(trait, trait.type)
@@ -270,6 +400,6 @@ if (model == 3){
 
 if (model == 4){
 	runM4(trait, trait.type)
-	extractData(trait, 4)
+	extractDataM4(trait)
 
 }
