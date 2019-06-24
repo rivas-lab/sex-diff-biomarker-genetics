@@ -24,6 +24,11 @@ se.cutoff <- 0.2
 calcLoglik <- FALSE
 filtDat <- TRUE
 
+DATE.RUN <- format(Sys.time(), "%m%d%y")
+
+system(sprintf("mkdir -p %s/biomarker_%s", DATA.FOLDER, DATE.RUN))
+system(sprintf("mkdir -p %s/biomarker_%s/m%s", DATA.FOLDER, DATE.RUN, model))
+
 ndim <- 2
 ndim_to_prefixes <- list("2"=c("zerosex", "onesex"), 
      "3"=c("pre_meno", "post_meno", "onesex"),
@@ -81,7 +86,7 @@ runM2 <- function(trait, trait.type){
 
     dat <- loadDat(trait, trait.type)
     dat$dat$K <- 4
-    save(dat, file=sprintf("%s/biomarker/m2/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/biomarker_%s/m2/dat_%s.RData", DATA.FOLDER, DATE.RUN, trait))
     if (calcLoglik==TRUE){
         model.file <- "models/model2_loglik.stan" # this is v2...
     } else {
@@ -94,7 +99,7 @@ runM2 <- function(trait, trait.type){
     print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/biomarker/m2/f_m2_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/biomarker_%s/m2/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 }
 
 
@@ -105,7 +110,7 @@ runM3 <- function(trait, trait.type){
 
     dat <- loadDat(trait, trait.type)
     dat$dat$K <- 4
-    save(dat, file=sprintf("%s/biomarker/m3/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/biomarker_%s/m3/dat_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 
     model.file <- "models/model3_v1.stan" # v2??
 
@@ -116,7 +121,7 @@ runM3 <- function(trait, trait.type){
     print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/biomarker/m3/f_m2_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/biomarker_%s/m3/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 }
 
 
@@ -125,7 +130,7 @@ runM4 <- function(trait, trait.type){
 
     dat <- loadDat(trait, trait.type)
     dat$dat$K <- 6
-    save(dat, file=sprintf("%s/biomarker/m4/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/biomarker_%s/m4/dat_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 
     model.file <- "models/model4_v1.stan" # v2??
 
@@ -136,7 +141,7 @@ runM4 <- function(trait, trait.type){
     print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/biomarker/m4/f_m2_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/biomarker_%s/m4/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 }
 
 
@@ -146,7 +151,7 @@ runM2 <- function(trait, trait.type){
 
     dat <- loadDat(trait, trait.type)
     dat$dat$K <- 4
-    save(dat, file=sprintf("%s/biomarker/m2/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/biomarker_%s/m2/dat_%s.RData", DATA.FOLDER, DATE.RUN, trait))
     if (calcLoglik==TRUE){
         model.file <- "models/model2_loglik.stan" # this is v2...
     } else {
@@ -159,7 +164,7 @@ runM2 <- function(trait, trait.type){
     print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/biomarker/m2/f_m2_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/biomarker_%s/m2/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 }
 
 
@@ -182,7 +187,7 @@ runM2.a <- function(trait, trait.type){
     print(fit2, pars=c("pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
     rm(dat)
-    save(fit2, file=sprintf("%s/biomarker/m2/f_m2.a_%s.RData", DATA.FOLDER, trait))
+    save(fit2, file=sprintf("%s/biomarker_%s/m2/f_m2.a_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 }
 
 
@@ -197,7 +202,7 @@ extractSNPcat <- function(snp.df, df.f, df.m, category, trait, model_num=2){
             both.snp.df <- merge(both.snp.df, comp4, by="SNP")       
     both.snp.df2 <- annotateSNP(both.snp.df)
 
-    write.table(both.snp.df2, file=sprintf("%s/biomarker/m%s/snps%s_%s.txt", DATA.FOLDER, model_num, category, trait), row.names=FALSE)
+    write.table(both.snp.df2, file=sprintf("%s/biomarker_%s/m%s/snps%s_%s.txt", DATA.FOLDER, DATE.RUN, model_num, category, trait), row.names=FALSE)
 
     }   
 
@@ -210,8 +215,8 @@ extractData <- function(trait, model_num=2){
 	print("Extracting")
     print(trait)
 
-	load(file=sprintf("%s/biomarker/m%s/dat_%s.RData", DATA.FOLDER, model_num, trait)) 
-    load(file=sprintf("%s/biomarker/m%s/f_m2_%s.RData", DATA.FOLDER, model_num, trait))
+	load(file=sprintf("%s/biomarker_%s/m%s/dat_%s.RData", DATA.FOLDER, DATE.RUN, model_num, trait)) 
+    load(file=sprintf("%s/biomarker_%s/m%s/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, model_num, trait))
 
     # fraction in non-null component
     p <- getPi(fit2)
@@ -225,7 +230,7 @@ extractData <- function(trait, model_num=2){
 
     # assign each SNP to a category
     posterior.df <- posteriorSNPtable(dat, fit2)
-    write.table(posterior.df, file=sprintf("%s/biomarker/m%s/snp_table_%s.txt", DATA.FOLDER, model_num, trait), row.names=FALSE, quote=FALSE)
+    write.table(posterior.df, file=sprintf("%s/biomarker_%s/m%s/snp_table_%s.txt", DATA.FOLDER, DATE.RUN, model_num, trait), row.names=FALSE, quote=FALSE)
     print("Posterior table generated")
 
     # remove large files from the workspace
@@ -296,7 +301,7 @@ extractSNPcat4 <- function(snp.df, df.f, df.m, category, trait){
     
 
 
-    write.table(both.snp.df2, file=sprintf("%s/biomarker/m4/%s_cat%s.txt", DATA.FOLDER, trait, category), row.names=FALSE, sep="\t")
+    write.table(both.snp.df2, file=sprintf("%s/biomarker_%s/m4/%s_cat%s.txt", DATA.FOLDER, DATE.RUN, trait, category), row.names=FALSE, sep="\t")
         }
 }
 
@@ -344,8 +349,8 @@ extractDataM4 <- function(trait){
      res = tryCatch({
 
         print(trait)
-    load(sprintf("%s/biomarker/m4/dat_%s.RData", DATA.FOLDER, trait))   
-    load(sprintf("%s/biomarker/m4/f_m2_%s.RData", DATA.FOLDER, trait))
+    load(sprintf("%s/biomarker_%s/m4/dat_%s.RData", DATA.FOLDER, DATE.RUN, trait))   
+    load(sprintf("%s/biomarker_%s/m4/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, trait))
     print("loaded")
     snp.df <- getSNPdf(dat, fit2)
         print("snp df obtained")
@@ -403,3 +408,5 @@ if (model == 4){
 	extractDataM4(trait)
 
 }
+
+
