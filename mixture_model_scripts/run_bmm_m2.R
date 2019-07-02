@@ -144,6 +144,26 @@ runM4 <- function(trait, trait.type){
     save(fit2, file=sprintf("%s/biomarker_%s/m4/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, trait))
 }
 
+runM5 <- function(trait, trait.type){
+	# run model 2 for a specified trait
+
+    dat <- loadDat(trait, trait.type)
+    dat$dat$K <- 4
+    save(dat, file=sprintf("%s/biomarker_%s/m5/dat_%s.RData", DATA.FOLDER, DATE.RUN, trait))
+
+    model.file <- "models/model5_v1.stan" # v2??
+
+    fit2 <- stan(file = model.file,  
+            data = dat$dat,    
+            chains = 4, warmup = 600, iter = 1200, cores = 4, refresh = 200,
+            control=list(adapt_delta=0.99))
+  
+    print(fit2, pars=c( "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
+    print("SAVING")
+    rm(dat)
+    save(fit2, file=sprintf("%s/biomarker_%s/m5/f_m2_%s.RData", DATA.FOLDER, DATE.RUN, trait))
+}
+
 
 
 runM2 <- function(trait, trait.type){
@@ -409,4 +429,7 @@ if (model == 4){
 
 }
 
-
+if (model == 5){
+   runM5(trait, trait.type)
+   extractData(trait, 5)
+}
