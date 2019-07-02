@@ -21,7 +21,7 @@ DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
 # list of filtered variants - how was this constructed?? need to check
-snps.to.keep <- read.table(sprintf("%s/snp_filt_list.txt", DATA.FOLDER), header=FALSE, 
+snps.to.keep <- read.table(sprintf("%s/snp_filt_list2.txt", DATA.FOLDER), header=FALSE, 
     colClasses="character")
 
 
@@ -47,8 +47,9 @@ fileChecks <- function(my.file, dat.source, chr, field){
 getFile <- function(dat.source, chr, field){
     prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
 
-    file.dat <- paste(c(prefix, ".", dat.source, ".PHENO1_c", chr, ".glm.linear.gz"), collapse="")
 
+    file.dat <- paste(c(prefix, ".", dat.source, ".", field, "_c", chr, ".glm.linear.gz"), collapse="")
+#    file.dat <- paste(c(prefix, ".", dat.source, ".", "PHENO1", "_c", chr, ".glm.linear.gz"), collapse="")
     my.classes = c("character", "numeric", "character", "character","character", "character",
                    "numeric", "numeric", "numeric", "numeric", "numeric")
 
@@ -56,7 +57,13 @@ getFile <- function(dat.source, chr, field){
         "BETA", "SE", "T_STAT", "P")
 
     checks <- fileChecks(file.dat, dat.source, chr, field)
-    if (checks == -1){ return(NA) }
+    if (checks == -1){ 
+       file.dat <- paste(c(prefix, ".", dat.source, ".", "PHENO1", "_c", chr, ".glm.linear.gz"), collapse="")
+       checks <- fileChecks(file.dat, dat.source, chr, field)
+       if (checks == -1){
+           return(NA) 
+	   }
+    }
     
     dat <- read.table(file.dat, colClasses=my.classes, header=FALSE)
     colnames(dat) <- col.labels
@@ -180,8 +187,8 @@ getRgConfMulti <- function(fit, ndim){ # 95% confidence interval
 # getDataQuant <- function(chr, field){
 #     # load data for a chromosome and a data field,
 #     prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
-#     file.f <- paste(c(prefix, ".zerosex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
-#     file.m <- paste(c(prefix, ".onesex.PHENO1_c", chr, ".glm.linear.gz"), collapse="")
+#     file.f <- paste(c(prefix, ".zerosex.", field, "_c", chr, ".glm.linear.gz"), collapse="")
+#     file.m <- paste(c(prefix, ".onesex.", field, "_c", chr, ".glm.linear.gz"), collapse="")
 
 #     my.classes = c("character", "numeric", "character", "character","character", "character",
 #                    "numeric", "numeric", "numeric", "numeric", "numeric")
