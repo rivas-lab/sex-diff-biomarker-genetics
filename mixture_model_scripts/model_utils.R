@@ -15,7 +15,7 @@ require('rstan')
 BINARY.SE.CUTOFF <- 1 ## might want to adjust
 QUANT.SE.CUTOFF <- 0.2
 
-GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/biomarker_gwas/" # TODO - update
+GWAS.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas1009/" # TODO - update
 #GWAS.FOLDER <- "/oak/stanford/groups/mrivas/projects/biomarkers/results/plink/combined" # for biomarker data
 DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
@@ -44,18 +44,21 @@ fileChecks <- function(my.file, dat.source, chr, field){
 
 ### LOAD SOME OF THE data
 # NOTE - this is only for quantitative
-getFile <- function(dat.source, chr, field){
+getFile <- function(dat.source, chr, field, gwas.folder){
+
+	GWAS.FOLDER <- gwas.folder
+
     prefix <- sprintf("%sukb24893_v2.%s", GWAS.FOLDER, field) 
 
-
-    file.dat <- paste(c(prefix, ".", dat.source, ".", field, "_c", chr, ".glm.linear.gz"), collapse="")
+    file.dat <- paste(c(GWAS.FOLDER, "ukb24893_v2", "_c", chr, ".", field, ".", dat.source, ".", field, ".glm.linear"), collapse="") 
+#    file.dat <- paste(c(prefix, ".", dat.source, ".", field, "_c", chr, ".glm.linear.gz"), collapse="")
 #    file.dat <- paste(c(prefix, ".", dat.source, ".", "PHENO1", "_c", chr, ".glm.linear.gz"), collapse="")
     my.classes = c("character", "numeric", "character", "character","character", "character",
                    "numeric", "numeric", "numeric", "numeric", "numeric")
 
     col.labels <- c("CHROM", "POS", "ID", "REF", "ALT1", "TEST", "OBS_CT", 
         "BETA", "SE", "T_STAT", "P")
-
+    print(file.dat)
     checks <- fileChecks(file.dat, dat.source, chr, field)
     if (checks == -1){ 
        file.dat <- paste(c(prefix, ".", dat.source, ".", "PHENO1", "_c", chr, ".glm.linear.gz"), collapse="")

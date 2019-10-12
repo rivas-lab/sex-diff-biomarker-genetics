@@ -14,7 +14,7 @@ source('heritability_utils.R')
 require('R.utils')
 require('data.table')
 
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
+DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/1009/"
 
 
 # PARSE ARGUMENTS
@@ -34,6 +34,7 @@ if (length(args > 3)){
 } else {
     ndim <- 2
 }
+
 
 # fifth argument - downsampled?
 if (length(args) > 4){
@@ -64,14 +65,14 @@ print(sprintf("Running M1 for trait %s with %s dim, %s, with prefixes %s", trait
 
 
 
-loadDat <- function(trait, trait.type){
+loadDat <- function(trait, trait.type, gwas.folder){
     
     if (biomarker==TRUE){
      list.ds <- lapply(c("female", "male"), function(sex) loadBiomarkerDat(trait, sex))
     } else {
     # for each trait
     list.ds <- lapply(list.prefixes, function(prefix) {
-        all.dat <- do.call(rbind, lapply(chrs, function(chr) { getFile(prefix, chr, trait)}));
+        all.dat <- do.call(rbind, lapply(chrs, function(chr) { getFile(prefix, chr, trait, gwas.folder)}));
         colnames(all.dat)[1:3] <- c("CHR", "BP", "SNP");
         return(all.dat)
     })
@@ -86,11 +87,17 @@ loadDat <- function(trait, trait.type){
 
 runM1 <- function(trait, trait.type){
 	# run model 1 for a specified trait
+    if (ndim==2){
+     gwas.folder="/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas1009/"
+    }
+    if (ndim==3){
+     gwas.folder="/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas_age_sex/"
+    }
 
-    dat <- loadDat(trait, trait.type)
+    dat <- loadDat(trait, trait.type, gwas.folder)
     print("Data loaded")
     dat$dat$K <- 2
-    save(dat, file=sprintf("%s/biomarker/dat_%s.RData", DATA.FOLDER, trait))
+    save(dat, file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait))
     print("LEARNING PARAMS")
     fit1 <- stan(file = "models/model1_no_loglik.stan",  
             data = dat$dat,    
@@ -98,7 +105,7 @@ runM1 <- function(trait, trait.type){
     print("SAVING")
     rm(dat)
     print(fit1, pars=c("Sigma", "pi", "Omegacor"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
-    save(fit1, file=sprintf("%s/biomarker/f_%s.RData", DATA.FOLDER, trait))
+    save(fit1, file=sprintf("%s/f_%s.RData", DATA.FOLDER, trait))
 
 }
 
@@ -106,8 +113,8 @@ extractData <- function(trait){
 
     print("EXTRACTING")
     # load the data and fit to extract info about the run
-    load(file=sprintf("%s/biomarker/dat_%s.RData", DATA.FOLDER, trait))
-    load(file=sprintf("%s/biomarker/f_%s.RData", DATA.FOLDER, trait))
+    load(file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait))
+    load(file=sprintf("%s/f_%s.RData", DATA.FOLDER, trait))
     
     m1.pi <- getPi(fit1)
     m1.Sigma <- getSigmaMulti(fit1, ndim)
@@ -126,7 +133,7 @@ extractData <- function(trait){
 
     # TODO - label these better
 
-    write.table(next.row, file=sprintf("%s/biomarker/summary_dat_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE)
+    write.table(next.row, file=sprintf("%s/summary_dat_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE)
 }
 
 calcErrBarsHerit <- function(trait){
@@ -146,36 +153,41 @@ calcErrBarsHerit <- function(trait){
         p <- pi.draws
         s.draws <- list_of_draws$Sigma
         Sigma <- s.draws
-
-        # extract lower + upper pi
+	
+	# extract lower + upper pi
         ordered.p <- p[order(p[,2]),] # ordering p by the non-null component 
-        p.lower <- ordered.p[0.125*nrow(ordered.p),]
+        p.lower <- ordered.p[0.025*nrow(ordered.p),]
         p.upper <- ordered.p[0.975*nrow(ordered.p),]
-
+        p.center <- ordered.p[0.50*nrow(ordered.p),]
+    
         # extract lower + upper sigma
         ordered.S <- Sigma[order(Sigma[,1,1]),,]
         s.upper <- ordered.S[0.975*dim(Sigma)[1],,]
-        s.lower <- ordered.S[0.125*dim(Sigma)[1],,]
+        s.lower <- ordered.S[0.025*dim(Sigma)[1],,]
+        s.center <- ordered.S[0.50*dim(Sigma)[1],,]
 
         # recalculate SNP membership
         dat2 <- dat
         dat2$categories <- NULL
         dat.u <- labelCategories(dat2, s.upper, p.upper)
         dat.l <- labelCategories(dat2, s.lower, p.lower)
+        dat.c <- labelCategories(dat2, s.center, p.center)
 
         h.up <- overallHeritability(dat.u, s.upper, p.upper)
         h.low <- overallHeritability(dat.l, s.lower, p.lower)
-        res <- list("up"=h.up, "low"=h.low)
+        h.center <- overallHeritability(dat.c, s.center, p.center)
+
+        res <- list("up"=h.up, "low"=h.low, "center"=h.center)
 
         # reformat into data frame
 
      my.df <- cbind(t(as.data.frame(res)), trait)
         my.df2 <- data.frame(cbind(my.df, rownames(my.df)))
 
-    colnames(my.df2) <- c("hf", "hm", "trait", "int")
+    colnames(my.df2) <- c("hf", "hm", "hc", "trait", "int")
     my.df3 <- melt(my.df2, id.vars=c("trait", "int"), variable.name="sex")
          rownames(my.df3) <- NULL
-	write.table(my.df3, file=sprintf("%s/biomarker/h_err_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE, sep="\t")
+	write.table(my.df3, file=sprintf("%s/h_err_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE, sep="\t")
     return(my.df3)
     }
 
