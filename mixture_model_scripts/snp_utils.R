@@ -1,5 +1,4 @@
 
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
 
 
 computePosterior <- function(B, SE, p, sigmasq, Sigma){
@@ -53,44 +52,11 @@ posteriorSNPtable <- function(dat, fit){
 }
 
 
-                             
-## Write out sex-specific SNP tables                             
-sexSpecSNPtables <- function(df.f, df.m, snp.df){
-    f.spec <- snp.df[which(snp.df$category==2),c("p2", "SNP")]
-    m.spec <- snp.df[which(snp.df$category==3),c("p3", "SNP")]
-    colnames(f.spec) <- c("post", "SNP")
-    colnames(m.spec) <- c("post", "SNP")
-
-
-    f.specific <- f.spec$SNP
-    m.specific <- m.spec$SNP
-
-    if (length(m.specific) > 0){
-        m.snps <- cbind(df.f[df.f$SNP %in% m.specific ,c("SNP", "CHR", "BP", "BETA","SE", "P")], 
-         df.m[df.m$SNP %in% m.specific,c("BETA","SE", "P")])
-        colnames(m.snps) <- c("SNP", "CHR", "BP", "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
-        m.snps.df <- m.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
-        m.snps.df <- merge(m.snps.df, m.spec, by="SNP")       
-    } else {
-        m.snps.df <- ""
-    }
-    if (length(f.specific) > 0){
-        f.snps <- cbind(df.f[df.f$SNP %in% f.specific,c("SNP", "CHR", "BP", "BETA","SE", "P")], 
-          df.m[df.m$SNP %in% f.specific,c("BETA","SE", "P")])
-        colnames(f.snps) <- c("SNP", "CHR", "BP" , "B_f", "SE_f", "p_f", "B_m", "SE_m", "p_m")
-        f.snps.df <- f.snps[,c("SNP", "CHR", "BP", "B_f", "B_m", "SE_f", "SE_m", "p_m","p_f")] 
-        f.snps.df <- merge(f.snps.df, f.spec, by="SNP")       
-       
-    } else {
-        f.snps.df <- ""
-    }
-
-    return(list('1'=f.snps.df, '2'=m.snps.df))
-    
-}    
 
 
 annotateSNP <- function(tab){
+    DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
+
     if (is.null(dim(tab))){return(tab)}
     gene.table <- read.table(sprintf("%s/snp_gene_table.txt", DATA.FOLDER), colClasses='character')
     combined.tab <- merge(tab, gene.table, by.x="SNP", by.y="snp", all.x=TRUE)

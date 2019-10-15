@@ -42,42 +42,6 @@ labelCategories <- function(dat, Sigma, p){
 }
 
 
-getH <- function(SE, Sigma, category){
-	#  get the individual heritability for a specific SNP
-
-    if (category == 2){
-        h_f <- Sigma[1,1] / (Sigma[1,1] + SE[1])
-        h_m <- Sigma[2,2] / (Sigma[2,2] + SE[2])
-        return(c(h_f, h_m))
-    } else {
-        return(c(NA,NA))
-    }    
-}
-
-getPlotHeritabilities <- function(dat, Sigma, trait.name){
-	# get and plot the individual SNP-level heritabilities
-
-	N <- (dat$dat$N)
-    hx <- sapply(1:N, function(i) getH(dat$dat$SE[i,], Sigma, dat$categories[i]))
-
-    png(sprintf('%s/dat_set/%s_heritability.png', DATA.DIR, trait.name))
-    plot(hx[1,] ~ hx[2,], ylab="h_f", xlab="h_m", 
-         main=paste("SNP-level heritabilities (", trait.name, ")", sep=""), col="darkblue")
-    lines(x=seq(0,1), y=seq(0,1))
-    dev.off()
-    return(hx)
-}
-
-calcHeritability <- function(se.p2, Sigma, p){
-	n <- nrow(se.p2)
-    num_f <- n*(p[2])*Sigma[1,1]
-    num_m <- n*(p[2])*Sigma[2,2]
-    
-    h_f <- num_f/(num_f + sum(se.p2[,1]))
-    h_m <- num_m/(num_m + sum(se.p2[,2]))
-    return(list("1"=h_f, "2"=h_m))
-
-}
 
 calcHeritabilityMulti <- function(se.p2, Sigma, p, idx){
     n <- nrow(se.p2)

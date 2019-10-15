@@ -1,19 +1,20 @@
 #!/bin/bash
-#SBATCH --job-name=bmm_bio_%A
-#SBATCH --output=logs/bmm_bio_%A_%a.out
-#SBATCH --error=logs/bmm_bio_%A_%a.err
-#SBATCH --array=1
-#SBATCH --time=48:00:00 
-#SBATCH --partition=rbaltman
+#SBATCH --job-name=run_bmm_%A
+#SBATCH --output=logs/run_bmm_%A_%a.out
+#SBATCH --error=logs/run_bmm_%A_%a.err
+#SBATCH --nodes=4
+#SBATCH --time=16:00:00 
+#SBATCH --partition=rbaltman,owners
 #SBATCH --mem=10000
 # usage:
-#    sbatch submit_run_bmm.sh <trait> <ndim> <downsampled>
+#    sbatch submit_run_bmm.sh <model> <trait> <ndim> 
 
-echo $SLURM_ARRAY_TASK_ID
+
 
 ml r-rstan
 
-#Rscript run_bmm.R $SLURM_ARRAY_TASK_ID '21001' 'quant' 'TRUE' 'opt'
-#Rscript run_bmm.R $SLURM_ARRAY_TASK_ID 'RH107' 'binary' 'TRUE' 'opt'
-#Rscript run_bmm.R $SLURM_ARRAY_TASK_ID 'RH107' 'binary' 'TRUE' 'vb'
-Rscript run_bmm_m1.R $SLURM_ARRAY_TASK_ID $1 'quant' $2 $3 $4
+model=$SLURM_ARRAY_TASK_ID
+trait=$1
+ndim=$2
+
+Rscript run_bmm.R ${model} ${trait} ${ndim}

@@ -1,181 +1,289 @@
-## run_bmm.R
-## E Flynn
-## Updated: 10/10/2017
-##
-## Code for running bayesian mixture model on a binary or quantitative trait.
-##   Relies on the code in model_utils for loading + running models on the data. 
-##
-##
-## To run:
-##    Rscript run_bmm.R <model=(1,2,3)> <trait> <trait-type=("binary" | "quant")> [<filter=(TRUE | FALSE)>] [<test-type=('opt' | 'vb')>]
-##
-## There are three possible models - model "3" is the alternate two-component model with no 
-##    sex-specific components for M2, we use this for model comparison.
-## Trait refers to phenotype ID, binary/quant is the type of trait.
-## The optional arguments are filtering (default= TRUE), and which type of test model to run 
-##    (optimizing or variational bayes).
-
+# run_bmm.R
+# E Flynn
+# 11/17/2017
+#
+# Updated code for running BMM model for a trait.
+#
+# Key updates:
+#   - sped up model/data loading by removing log_lik calculation because I was not using this
+#   - extract heritability results as part of the analysis instead of post-processing
+#   - extract results divided by chromosome (intended for X/XY/autosomal sub-analyses)
 
 source('model_utils.R')
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
+source('heritability_utils.R')
+source('snp_utils.R')
 
+require('R.utils')
+require('data.table')
+require('tidyverse')
+require('reshape2')
+require('parallel')
+
+DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/1015/"
+GWAS.DIR <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas1015_ss/"
 
 # PARSE ARGUMENTS
-args = commandArgs(trailingOnly=TRUE) # 1, 2, or 3 (2-alt)
+args = commandArgs(trailingOnly=TRUE) 
 
 model <- as.numeric(args[1])
-#if (!model %in% c(1,2,3)){ stop ("please specify a model (1,2,or 3) for the first argument") }
-
-
 trait <- args[2]
-trait.type <- args[3] # binary or quant
-if (!trait.type %in% c('binary', 'quant')){ stop ("please specify the type of trait (binary or quant") }
+
+# 3rd argument - number of dimensions
+if (length(args > 2)){
+    ndim <- as.numeric(args[3])
+} else {
+    ndim <- 2
+}
+
+# 4th argument - downsampled?
+if (length(args) > 3){
+    downsampled <- args[4]
+} else { 
+    downsampled <- FALSE 
+}
 
 
-filt <- ifelse(length(args)>3 & args[4] == "FALSE", FALSE, TRUE) # whether to filter, optional (default TRUE)
-test.type <- ifelse(length(args) >= 5, args[5], NA) # parse test type ('vb' or 'opt'), optional
+if (ndim==3 & model==2){
+    print("Warning: M2 is not implemented for 3D yet.")
+    exit()
+}
 
-#maf.idx <- as.numeric(ifelse(length(args)==6, args[6], 1))
 maf.cutoff <- 0.01
-se.cutoff <- 0.4 #0.2
+se.cutoff <- 0.2
 
-print(trait)
+ndim_to_prefixes <- list("2"=c("zerosex", "onesex"), 
+    "3"=c("pre_meno", "post_meno", "onesex"),
+    "4"=c("under65_f", "over65_f", "under65_m", "over65_m"))
 
-loadDat <- function(trait, trait.type, maf.cutoff=0.01, se.filt=FALSE, se.cutoff=0.4){
-	# function for loading the data
+list.prefixes <- ndim_to_prefixes[[as.character(ndim)]]
 
-	# load all the data
-	if (trait.type == 'binary'){
-		all.dat <- lapply(1:22, function(x){ getDataBin(as.character(x), trait)})
-	} 
-	if (trait.type == 'quant') {
-		all.dat <- lapply(1:22, function(x){ getDataQuant(as.character(x), trait)})
-	}
+if (downsampled==TRUE){ 
+    list.prefixes <- sapply(list.prefixes, function(prefix) paste(prefix, "d", sep="_"))
+}
 
-	# reformat data, remove rows that are not shared
-    dat.reform <- reformatData(all.dat, trait.type, maf.cutoff)
-    filt.f <- dat.reform$`1`
-    filt.m <- dat.reform$`2`
+downsampled_str <- ifelse(downsampled, "downsampled", "")
+print(sprintf("Running %s for trait %s with %s dim, %s, with prefixes %s", model, trait, ndim, downsampled_str, paste(list.prefixes, collapse=" ")))
 
-    # filter by standard error
-    if (se.filt==TRUE){
-        dat.filt <- filterSE(filt.f, filt.m, trait.type, cutoff=se.cutoff)
-        filt.f <- dat.filt$`1`
-        filt.m <- dat.filt$`2`
+
+
+getData <- function(trait){
+       # for each trait
+    list.ds <- lapply(list.prefixes, function(prefix) {
+        dat.1 <- fread(sprintf("%s/ukb24983_v2_hg19.%s_%s.genotyped.glm.linear", GWAS.DIR, trait, prefix), data.table=FALSE)
+        
+        colnames(dat.1)[1:3] <- c("CHR", "BP", "SNP");
+        
+        rownames(dat.1) <- dat.1$SNP
+
+        # remove NAs
+        dat.2 <- dat.1[!is.na(dat.1$SE),]
+
+        # SE filter
+        dat.3 <- dat.2[dat.2$SE < QUANT.SE.CUTOFF,]
+
+        # MAF filter
+        dat.4 <- dat.3[dat.3$SNP %in% snps.to.keep$V1,]
+        return(dat.4)
+
+    })
+
+    list.ds2 <- extractOverlappingRows(list.ds)
+
+}
+
+loadDat <- function(trait){
+    dat.file <- sprintf("%s/dat_%s.RData", DATA.FOLDER, trait)
+
+    if (!file.exists(dat.file)){
+    list.ds2 <- getData(trait)
+    dat<- extractDataStanMulti(list.ds2)        
+    save(dat, file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait))
+        } else{
+            load(dat.file)
     }
-
-    # extract dat in a format for stan input
-    dat <- extractDataStan(filt.f, filt.m)
 
     return(dat)
 }
 
 
-runM1 <- function(trait, trait.type, maf.cutoff=0.01, filt=FALSE, se.cutoff=0.4){
-	# run model 1 for a specified trait
 
-    print(maf.cutoff)
-    
-    dat <- loadDat(trait, trait.type, maf.cutoff, filt, se.cutoff)
+
+runM1 <- function(trait){
+	# run model 1 for a specified trait
+    dat <- loadDat(trait)
     dat$dat$K <- 2
-    print("training")
-    fit1 <- stan(file = "models/model1_log_mix.stan",  
+    print("LEARNING PARAMS")
+    print(parallel::detectCores())
+    options(mc.cores = parallel::detectCores())
+    rstan_options(auto_write = TRUE)
+    fit1 <- stan(file = "models/model1_no_loglik.stan",  
             data = dat$dat,    
-            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
+            chains = 4, warmup = 200, iter = 600, cores = 4, refresh = 200)
     print("SAVING")
-    print(fit1, pars=c("Sigma", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
-    save(dat, fit1, file=paste(c(DATA.FOLDER, "f_m1_", trait,"_m", maf.cutoff, "_s", se.cutoff, ".RData"), collapse=""))
+    rm(dat)
+    print(fit1, pars=c("Sigma", "pi", "Omegacor"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
+    save(fit1, file=sprintf("%s/m1/f_%s.RData", DATA.FOLDER, trait))
+
 }
 
-runM2 <- function(trait, trait.type, maf.cutoff=0.01, filt=FALSE, se.cutoff=0.4){
-	# run model 2 for a specified trait
 
-    dat <- loadDat(trait, trait.type, maf.cutoff, filt, se.cutoff)
+runM2 <- function(trait){
+    # run model 2 for a specified trait
+
+    dat <- loadDat(trait)
     dat$dat$K <- 4
 
-    fit2 <- stan(file = "models/model2_loglik.stan",  
+    print(parallel::detectCores())
+    options(mc.cores = parallel::detectCores())
+    rstan_options(auto_write = TRUE)
+    fit2 <- stan(file = "models/model2.stan",  
             data = dat$dat,    
-            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
+            chains = 4, warmup = 50, iter = 50, cores = 4, refresh = 20)
   
-    print(fit2, pars=c("sigmasq", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
+    print(fit2, pars=c("sigmasq", "pi", "Sigma"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")
-    save(dat, fit2, file=paste(c(DATA.FOLDER, "f_m2_", trait, ".RData"), collapse=""))
+    rm(dat)
+    save(fit2, file=sprintf("%s/m2/f_m2_%s.RData", DATA.FOLDER, trait))
 }
 
-runM2.a <- function(trait, trait.type, maf.cutoff=0.01, filt=FALSE, se.cutoff=0.4){
-	# run alternative model for model 2 
+extractDataM1 <- function(trait){
+
+    print("EXTRACTING")
+    # load the data and fit to extract info about the run
+    load(file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait))
+    load(file=sprintf("%s/m1/f_%s.RData", DATA.FOLDER, trait))
     
-    dat <- loadDat(trait, trait.type, maf.cutoff, filt, se.cutoff)
-    dat$dat$K <- 2
-    fit2 <- stan(file = "models/model2_alt_loglik.stan",  
-            data = dat$dat,    
-            chains = 4, warmup = 200, iter = 300, cores = 4, refresh = 200)
+    m1.pi <- getPi(fit1)
+    m1.Sigma <- getSigmaMulti(fit1, ndim)
+    rg <- getRgMulti(fit1, ndim)
+    rg.c <- getRgConfMulti(fit1, ndim)
 
-    print(fit2, pars=c("sigmasq", "pi"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
-    print("SAVING")
-    save(dat, fit2, file=paste(c(DATA.FOLDER, "f_m2.a_", trait, ".RData"), collapse=""))
+    rm(fit1)
+
+    # assign each SNP to a component, estimate heritability
+    #dat <- labelCategories(dat, m1.Sigma, m1.pi) # label the SNPs with heritability
+    #h <- overallHeritability(dat, m1.Sigma, m1.pi)
+    h <- c(NA, NA)
+
+    # write out the data
+    next.row <- data.frame(t(c(trait, dat$dat$N, unlist(m1.pi), unlist(m1.Sigma), unlist(rg), unlist(rg.c$l), unlist(rg.c$u), unlist(h))))
+
+    # TODO - label these better
+    write.table(next.row, file=sprintf("%s/m1/summary_dat_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE)
 }
 
-testModels <- function(trait, trait.type, filt, test.type){
-    # run test models with optimizing or variational bayes
+calcErrBarsHerit <- function(trait){
+    fit.file=sprintf("%s/m1/f_%s.RData", DATA.FOLDER, trait)
+    if (!file.exists(fit.file)){
+            df <- data.frame(t(c("NA", trait, "NA", "NA")))
+            colnames(df) <- c("value", "trait", "int", "sex")
+            return(df)
 
-    dat <- loadDat(trait, trait.type, se.filt=filt)
+        }
+        load(file=fit.file)
+        load(file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait))
 
-    if (test.type == "opt"){
+        # extract all estimate
+        list_of_draws <- rstan::extract(fit1)
+        pi.draws <- list_of_draws$pi
+        p <- pi.draws
+        s.draws <- list_of_draws$Sigma
+        Sigma <- s.draws
+	
+	# extract lower + upper pi
+        ordered.p <- p[order(p[,2]),] # ordering p by the non-null component 
+        p.lower <- ordered.p[0.025*nrow(ordered.p),]
+        p.upper <- ordered.p[0.975*nrow(ordered.p),]
+        p.center <- ordered.p[0.50*nrow(ordered.p),]
+    
+        # extract lower + upper sigma
+        ordered.S <- Sigma[order(Sigma[,1,1]),,]
+        s.upper <- ordered.S[0.975*dim(Sigma)[1],,]
+        s.lower <- ordered.S[0.025*dim(Sigma)[1],,]
+        s.center <- ordered.S[0.50*dim(Sigma)[1],,]
 
-        # run model 1 with optimizing
-        dat$dat$K <- 2
+        # recalculate SNP membership
+        dat2 <- dat
+        dat2$categories <- NULL
+        dat.u <- labelCategories(dat2, s.upper, p.upper)
+        dat.l <- labelCategories(dat2, s.lower, p.lower)
+        dat.c <- labelCategories(dat2, s.center, p.center)
 
-        m1 <- stan_model("models/model1.stan")
-        f1 <- timeModel(optimizing(m1, dat$dat, hessian=TRUE))
-        print(f1)
+        h.up <- overallHeritability(dat.u, s.upper, p.upper)
+        h.low <- overallHeritability(dat.l, s.lower, p.lower)
+        h.center <- overallHeritability(dat.c, s.center, p.center)
 
-        dat$dat$K <- 4
-        m2 <- stan_model("models/model2.stan")
-        f2 <- timeModel(optimizing(m2, dat$dat, hessian=TRUE))
-        print(f2)
+        res <- list("up"=h.up, "low"=h.low, "center"=h.center)
 
-        save(f1, f2, file=sprintf("%s/test_opt_%s.RData", DATA.FOLDER, trait))
+        # reformat into data frame
 
-    } 
-    if (test.type == "vb") {
-        dat$dat$K <- 2
+     my.df <- cbind(t(as.data.frame(res)), trait)
+        my.df2 <- data.frame(cbind(my.df, rownames(my.df)))
 
-        m1 <- stan_model("models/model1.stan")
-        f1.v <- timeModel(vb(m1, dat$dat))
-        print(f1.v)
-
-        dat$dat$K <- 4
-
-        m2 <- stan_model("models/model2.stan")
-        f2.v <- timeModel(vb(m2, dat$dat))
-        print(f2.v)
-        save(f1.v, f2.v, file=sprintf("%s/test_vb_%s.RData", DATA.FOLDER, trait))
-
+    colnames(my.df2) <- c("hf", "hm", "trait", "int")
+    my.df3 <- melt(my.df2, id.vars=c("trait", "int"), variable.name="sex")
+         rownames(my.df3) <- NULL
+	write.table(my.df3, file=sprintf("%s/m1/h_err_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE, sep="\t")
+    return(my.df3)
     }
+
+
+### post-processing
+extractDataM2 <- function(trait){
+    print("Extracting")
+    print(trait)
+
+    load(file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait)) 
+    load(file=sprintf("%s/m2/f_m2_%s.RData", DATA.FOLDER, trait))
+
+    # fraction in non-null component
+    p <- getPi(fit2)
+
+    # sigmasq
+    sigmasq <- getVars(fit2)
+    Sigma <- getSigma(fit2)
+ 
+    # assign each SNP to a category
+    posterior.df <- posteriorSNPtable(dat, fit2)
+    write.table(posterior.df, file=sprintf("%s/m2/snp_table_%s.txt", DATA.FOLDER, trait), row.names=FALSE, quote=FALSE)
+    print("Posterior table generated")
+
+    # remove large files from the workspace
+    rm(fit2)
+
+    cat.count <- table(posterior.df$category)
+    print(cat.count)
+
+    # create a data frame with the pvalues
+    p.df <- dat$p 
+    se.df <- dat$dat$SE
+    beta.df <- dat$dat$B
+    snp.df <- data.frame(dat$snp)
+    chr.df <- data.frame(dat$chr)
+    full.df <- do.call(cbind, list(snp.df, chr.df, beta.df, se.df, p.df))
+    colnames(full.df) <- c("SNP", "CHR", "B.f", "B.m", "SE.f", "SE.m", "P.f", "P.m")
+    comb.df <- cbind(full.df, posterior.df %>% dplyr::select(p1, p2, p3, p4, category))
+    non.null.snps <- comb.df %>% dplyr::filter(category %in% c(2,3,4))
+
+    annot.snp <- annotateSNP(non.null.snps)
+     
+    sapply(unique(annot.snp$category), function(category) {
+        annot.snp.cat <- annot.snp %>% dplyr::filter(category==category)
+        write.table(annot.snp.cat, file=sprintf("%s/m2/snps%s_%s.txt", DATA.FOLDER, category, trait), row.names=FALSE)
+         } )
 }
 
 
-# run test models if specified
-if (!is.na(test.type)){
-    print("TESTING")
-	testModels(trait, trait.type, filt, test.type)
 
-} else {
 
-    # run models 
-    if (model==1){
-        print("running M1")
-        runM1(trait, trait.type, maf.cutoff, filt, se.cutoff)
-    }
-    if (model==2){
-        runM2(trait, trait.type, maf.cutoff, filt, se.cutoff)
-    }
-    if (model==3){
-        runM2.a(trait, trait.type, maf.cutoff, filt, se.cutoff)
-    }
-
+if (model==1){
+   runM1(trait)
+   extractDataM1(trait)
+   calcErrBarsHerit(trait)
 }
-
+if (model==2){
+    runM2(trait)
+   extractDataM2(trait)
+}
 
 

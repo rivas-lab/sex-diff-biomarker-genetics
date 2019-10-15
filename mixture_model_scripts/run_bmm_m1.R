@@ -11,42 +11,37 @@
 
 source('model_utils.R')
 source('heritability_utils.R')
+
 require('R.utils')
 require('data.table')
+require('reshape2')
+require('parallel')
 
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/1009/"
-
+DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/1015/m1/"
+GWAS.DIR <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/test_gwas/"
 
 # PARSE ARGUMENTS
 args = commandArgs(trailingOnly=TRUE) # 1, 2, or 3 
 
-model <- as.numeric(args[1])
-#if (!model %in% c(1,2,3)){ stop ("please specify a model (1,2,or 3) for the first argument") }
+trait <- args[1]
 
-trait <- args[2]
-trait.type <- args[3] # binary or quant
-if (!trait.type %in% c('binary', 'quant')){ stop ("please specify the type of trait (binary or quant") }
-
-
-# fourth argument - number of dimensions
-if (length(args > 3)){
-    ndim <- as.numeric(args[4])
+# 2nd argument - number of dimensions
+if (length(args > 1)){
+    ndim <- as.numeric(args[2])
 } else {
     ndim <- 2
 }
 
+# 3rd argument - downsampled?
+if (length(args) > 2){
+    downsampled <- args[3]
+} else { 
+downsampled <- FALSE 
+}
 
-# fifth argument - downsampled?
-if (length(args) > 4){
-    downsampled <- args[5]
-} else { downsampled <- FALSE }
 
-#biomarker <- args[6]
-biomarker <- FALSE
 maf.cutoff <- 0.01
 se.cutoff <- 0.2
-
-chrs <- c(1:22, "X", "XY") # make sure works for X, XY
 
 ndim_to_prefixes <- list("2"=c("zerosex", "onesex"), 
     "3"=c("pre_meno", "post_meno", "onesex"),
@@ -63,42 +58,48 @@ print(sprintf("Running M1 for trait %s with %s dim, %s, with prefixes %s", trait
 
 
 
+loadDat <- function(trait){
 
-
-loadDat <- function(trait, trait.type, gwas.folder){
-    
-    if (biomarker==TRUE){
-     list.ds <- lapply(c("female", "male"), function(sex) loadBiomarkerDat(trait, sex))
-    } else {
     # for each trait
     list.ds <- lapply(list.prefixes, function(prefix) {
-        all.dat <- do.call(rbind, lapply(chrs, function(chr) { getFile(prefix, chr, trait, gwas.folder)}));
-        colnames(all.dat)[1:3] <- c("CHR", "BP", "SNP");
-        return(all.dat)
+        dat.1 <- fread(sprintf("%s/ukb24983_v2_hg19.%s_%s.genotyped.glm.linear", GWAS.DIR, trait, prefix), data.table=FALSE)
+        
+        colnames(dat.1)[1:3] <- c("CHR", "BP", "SNP");
+        
+        rownames(dat.1) <- dat.1$SNP
+
+        # remove NAs
+        dat.2 <- dat.1[!is.na(dat.1$SE),]
+
+        # SE filter
+        dat.3 <- dat.2[dat.2$SE < QUANT.SE.CUTOFF,]
+
+        # MAF filter
+        dat.4 <- dat.3[dat.3$SNP %in% snps.to.keep$V1,]
+        return(dat.4)
+
     })
-    }
 
     list.ds2 <- extractOverlappingRows(list.ds)
-
+    # maybe keep the pvals? we seem to want these
     stan.obj <- extractDataStanMulti(list.ds2)
     return(stan.obj)
 }
 
 
-runM1 <- function(trait, trait.type){
-	# run model 1 for a specified trait
-    if (ndim==2){
-     gwas.folder="/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas1009/"
-    }
-    if (ndim==3){
-     gwas.folder="/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas_age_sex/"
-    }
 
-    dat <- loadDat(trait, trait.type, gwas.folder)
+
+runM1 <- function(trait){
+	# run model 1 for a specified trait
+
+    dat <- loadDat(trait)
     print("Data loaded")
     dat$dat$K <- 2
     save(dat, file=sprintf("%s/dat_%s.RData", DATA.FOLDER, trait))
     print("LEARNING PARAMS")
+    print(parallel::detectCores())
+    options(mc.cores = parallel::detectCores())
+    rstan_options(auto_write = TRUE)
     fit1 <- stan(file = "models/model1_no_loglik.stan",  
             data = dat$dat,    
             chains = 4, warmup = 200, iter = 600, cores = 4, refresh = 200)
@@ -124,15 +125,14 @@ extractData <- function(trait){
     rm(fit1)
 
     # assign each SNP to a component, estimate heritability
-    dat <- labelCategories(dat, m1.Sigma, m1.pi) # label the SNPs with heritability
-    h <- overallHeritability(dat, m1.Sigma, m1.pi)
-   
+    #dat <- labelCategories(dat, m1.Sigma, m1.pi) # label the SNPs with heritability
+    #h <- overallHeritability(dat, m1.Sigma, m1.pi)
+    h <- c(NA, NA)
 
     # write out the data
     next.row <- data.frame(t(c(trait, dat$dat$N, unlist(m1.pi), unlist(m1.Sigma), unlist(rg), unlist(rg.c$l), unlist(rg.c$u), unlist(h))))
 
     # TODO - label these better
-
     write.table(next.row, file=sprintf("%s/summary_dat_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE)
 }
 
@@ -184,7 +184,7 @@ calcErrBarsHerit <- function(trait){
      my.df <- cbind(t(as.data.frame(res)), trait)
         my.df2 <- data.frame(cbind(my.df, rownames(my.df)))
 
-    colnames(my.df2) <- c("hf", "hm", "hc", "trait", "int")
+    colnames(my.df2) <- c("hf", "hm", "trait", "int")
     my.df3 <- melt(my.df2, id.vars=c("trait", "int"), variable.name="sex")
          rownames(my.df3) <- NULL
 	write.table(my.df3, file=sprintf("%s/h_err_%s_%s_%s.txt", DATA.FOLDER, trait, ndim, downsampled_str), row.names=FALSE, quote=FALSE, sep="\t")
@@ -192,8 +192,10 @@ calcErrBarsHerit <- function(trait){
     }
 
 
-runM1(trait, trait.type)
-extractData(trait)
-calcErrBarsHerit(trait)
+
+   runM1(trait)
+   extractData(trait)
+   calcErrBarsHerit(trait)
+
 
 
