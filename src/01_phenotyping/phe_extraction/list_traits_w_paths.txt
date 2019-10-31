@@ -1,0 +1,75 @@
+trait	category	variable_name	derived	path
+INI21001	anthropometric traits	BMI	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI21001.phe
+INI50	anthropometric traits	height	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI50.phe
+INI48	anthropometric traits	waist_circum	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI48.phe
+INI49	anthropometric traits	hip_circum	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI49.phe
+INI4079	lab test	BP-diastolic	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI4079.phe
+INI4080	lab test	BP-systolic	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI4080.phe
+INI20150	breathing	FEV-1	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI20150.phe
+INI3063	breathing	FVC	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI3063.phe
+INI3064	breathing	PEF	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI3064.phe
+INI23100	fat distribution	total_fat_mass	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23100.phe
+INI23116	fat distribution	leg_fat_mass_(l)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23116.phe
+INI23112	fat distribution	leg_fat_mass_(r)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23112.phe
+INI23124	fat distribution	arm_fat_mass_(l)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23124.phe
+INI23120	fat distribution	arm_fat_mass_(r)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23120.phe
+INI23128	fat distribution	trunk_fat_mass	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23128.phe
+INI23099	fat distribution	body_fat_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23099.phe
+INI23105	lab test	basal_metabolic_rate	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23105.phe
+INI23115	fat distribution	leg_fat_percentage_(l)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23115.phe
+INI23111	fat distribution	leg_fat_percentage_(r)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23111.phe
+INI23123	fat distribution	arm_fat_percentage_(l)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23123.phe
+INI23119	fat distribution	arm_fat_percentage_(r)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23119.phe
+INI23127	fat distribution	trunk_fat_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23127.phe
+INI23100	fat distribution	whole_body_fat_mass	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23100.phe
+INI23101	fat distribution	whole_body_fat-free_mass	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23101.phe
+INI23102	fat distribution	whole_body_water_mass	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23102.phe
+INI23106	fat distribution	impedance_of_whole_body	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23106.phe
+INI23107	fat distribution	impedance_of_leg_(r)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23107.phe
+INI23108	fat distribution	impedance_of_leg_(l)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23108.phe
+INI23109	fat distribution	impedance_of_arm_(r)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23109.phe
+INI23110	fat distribution	impedance_of_arm_(l)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/11139/24614/phe/INI23110.phe
+INI46	physical test	Hand_grip_strength_(left)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/10136/10137/phe/INI46.phe
+INI47	physical test	Hand_grip_strength_(right)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/10136/21731/phe/INI47.phe
+INI20015	anthropometric traits	Sitting_height	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI20015.phe
+INI20019	hearing test	Speech-reception-threshold_(SRT)_estimate_(left)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI20019.phe
+INI20021	hearing test	Speech-reception-threshold_(SRT)_estimate_(right)	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI20021.phe
+INI20022	anthropometric traits	Birth_weight	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/10136/10137/phe/INI20022.phe
+INI20150	breathing	Forced_expiratory_volume_in_1-second_(FEV1),_Best_measure	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI20150.phe
+INI20151	breathing	Forced_vital_capacity_(FVC),_Best_measure	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI20151.phe
+INI21021	lab test	Pulse_wave_Arterial_Stiffness_index	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/10136/21731/phe/INI21021.phe
+INI30000	blood composition	White_blood_cell_(leukocyte)_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30000.phe
+INI30010	blood composition	Red_blood_cell_(erythrocyte)_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30010.phe
+INI30020	blood composition	Haemoglobin_concentration	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30020.phe
+INI30030	blood composition	Haematocrit_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30030.phe
+INI30040	blood composition	Mean_corpuscular_volume	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30040.phe
+INI30050	blood composition	Mean_corpuscular_haemoglobin	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30050.phe
+INI30060	blood composition	Mean_corpuscular_haemoglobin_concentration	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30060.phe
+INI30070	blood composition	Red_blood_cell_(erythrocyte)_distribution_width	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30070.phe
+INI30080	blood composition	Platelet_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30080.phe
+INI30090	blood composition	Platelet_crit	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30090.phe
+INI30100	blood composition	Mean_platelet_(thrombocyte)_volume	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30100.phe
+INI30110	blood composition	Platelet_distr2ibution_width	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30110.phe
+INI30120	blood composition	Lymphocyte_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30120.phe
+INI30130	blood composition	Monocyte_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30130.phe
+INI30140	blood composition	Neutrophill_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30140.phe
+INI30150	blood composition	Eosinophill_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30150.phe
+INI30160	blood composition	Basophill_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30160.phe
+INI30170	blood composition	Nucleated_red_blood_cell_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30170.phe
+INI30180	blood composition	Lymphocyte_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30180.phe
+INI30190	blood composition	Monocyte_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30190.phe
+INI30200	blood composition	Neutrophill_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30200.phe
+INI30210	blood composition	Eosinophill_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30210.phe
+INI30220	blood composition	Basophill_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30220.phe
+INI30230	blood composition	Nucleated_red_blood_cell_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30230.phe
+INI30240	blood composition	Reticulocyte_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30240.phe
+INI30250	blood composition	Reticulocyte_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30250.phe
+INI30260	blood composition	Mean_reticulocyte_volume	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30260.phe
+INI30270	blood composition	Mean_sphered_cell_volume	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30270.phe
+INI30280	blood composition	Immature_reticulocyte_fraction	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30280.phe
+INI30290	blood composition	High_light_scatter_reticulocyte_percentage	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30290.phe
+INI30300	blood composition	High_light_scatter_reticulocyte_count	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30300.phe
+INI30500	urinalysis	Microalbumin_in_urine	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30500.phe
+INI30510	urinalysis	Creatinine_(enzymatic)_in_urine	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30510.phe
+INI30520	urinalysis	Potassium_in_urine	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30520.phe
+INI30530	urinalysis	Sodium_in_urine	FALSE	/oak/stanford/groups/mrivas/ukbb24983/phenotypedata/9796/24611/phe/INI30530.phe
