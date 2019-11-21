@@ -10,5 +10,20 @@ In each directory, we have multiple versions
 - `v2`: A revised version with a fix for the covariates inconsistency issue. We tried to ask `snpnet` to deal with the covariates.
 - `v2.1`: the final results, where we passed the residuals from the covariate correction.
 
+## File location
 
+### PRS score files
 
+```
+/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/combined/Testosterone_residuals/results/score/Testosterone_residuals.sscore
+/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/onesex/Testosterone_residuals/results/score/Testosterone_residuals.sscore
+/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/zerosex/Testosterone_residuals/results/score/Testosterone_residuals.sscore
+```
+
+### BETAs from snpnet
+
+```
+/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/combined/Testosterone_residuals/results/betas.tsv
+/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/onesex/Testosterone_residuals/results/betas.tsv
+/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/zerosex/Testosterone_residuals/results/betas.tsv
+```
