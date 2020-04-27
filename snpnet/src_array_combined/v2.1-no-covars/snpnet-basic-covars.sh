@@ -4,7 +4,7 @@
 #SBATCH  --error=logs/snpnet.%A.err
 #SBATCH --nodes=1
 #SBATCH --cores=8
-#SBATCH --mem=64000
+#SBATCH --mem=80000
 #SBATCH --time=4-0:00:00
 #SBATCH -p mrivas
 set -beEuo pipefail
@@ -30,7 +30,8 @@ if [ ! -d ${results_dir} ] ; then mkdir -p ${results_dir} ; fi
 
 echo "[$0 $(date +%Y%m%d-%H%M%S)] [start] hostname = $(hostname) SLURM_JOBID = ${SLURM_JOBID:=0}; pop_name = ${pop_name}; phenotype = ${phenotype_name}" >&2
 
-ml load snpnet_yt/0.3.5
+# ml load snpnet_yt/0.3.5
+ml load snpnet_yt/0.3.6
 
 bash ${snpnet_wrapper} --nCores ${cores} --memory ${mem} \
     --covariates ${covariates} --split_col "split_${pop_name}" \
