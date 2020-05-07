@@ -1,5 +1,11 @@
 # additional `snpnet` runs with minimum sets of covariates
 
+## results files
+
+`/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1-basic-covars/`
+
+## notes
+
 Reviewer's comment:
 
 ```{text}
