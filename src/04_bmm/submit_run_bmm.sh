@@ -11,12 +11,14 @@
 
 
 
-ml r-rstan
+ml purge
+ml load R/3.5.1
+ml load gcc/8.1.0
 
 model=$SLURM_ARRAY_TASK_ID
-trait=$1
-ndim=$2
-outdir=$3
-indir=$4
-suffix=$5
-Rscript run_bmm.R ${model} ${trait} ${ndim} ${outdir} ${indir} ${suffix}
+trait=Testosterone
+ndim=2
+outdir=data/
+indir=data/gwas
+#suffix=$5
+Rscript src/04_bmm/run_bmm_vary_params.R ${model} ${trait} ${ndim} ${outdir} ${indir} #${suffix}

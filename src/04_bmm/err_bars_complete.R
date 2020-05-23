@@ -1,8 +1,8 @@
 calcErrBarsHerit <- function(trait, indir, idx){
 	
     require('rstan')
-    source("/scratch/PI/mrivas/users/erflynn/sex_div_gwas/mixture_model_scripts/model_utils.R")
-    source("/scratch/PI/mrivas/users/erflynn/sex_div_gwas/mixture_model_scripts/heritability_utils.R")
+    source("src/04_bmm/model_utils.R")
+    source("src/04_bmm/heritability_utils.R")
     require('tidyverse')
     ndim <- 2
 
@@ -19,7 +19,7 @@ calcErrBarsHerit <- function(trait, indir, idx){
         s.draws <- list_of_draws$Sigma
         Sigma <- s.draws
 
-	indices <- c((16*(idx-1)+1):(16*(idx)))
+	indices <- c((40*(idx-1)+1):(40*(idx)))
 	#indices <- c(1,2)
 	res.df <- do.call(rbind, lapply(indices, function(i){ 
 		p.i <- p[i,];
@@ -28,14 +28,14 @@ calcErrBarsHerit <- function(trait, indir, idx){
         	h.i <- overallHeritability(dat.i, s.i, p.i);
 		df <- data.frame("draw"=i, "h_f"=h.i[[1]], "h_m"=h.i[[2]])
 	}))
-	write.table(res.df, file=sprintf("/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/h_err_1021/%s_%s.txt", trait, idx), row.names=FALSE, quote=FALSE)
+	write.table(res.df, file=sprintf("data/h_err/%s_%s.txt", trait, idx), row.names=FALSE, quote=FALSE)
     }
 
 args = commandArgs(trailingOnly=TRUE)
 trait <- args[1]
 data.dir <- as.numeric(args[2])
 if (data.dir == 1){
-    indir <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/1019/"
+    indir <- "data/"
 
 } 
 if (data.dir==2){

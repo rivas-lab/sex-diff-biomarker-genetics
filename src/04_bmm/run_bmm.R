@@ -9,9 +9,9 @@
 #   - extract heritability results as part of the analysis instead of post-processing
 #   - extract results divided by chromosome (intended for X/XY/autosomal sub-analyses)
 
-source('model_utils.R')
-source('heritability_utils.R')
-source('snp_utils.R')
+source('src/04_bmm/model_utils.R')
+source('src/04_bmm/heritability_utils.R')
+source('src/04_bmm/snp_utils.R')
 
 require('R.utils')
 require('data.table')
@@ -19,8 +19,8 @@ require('tidyverse')
 require('reshape2')
 require('parallel')
 
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
-GWAS.DIR <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas1015/"
+DATA.FOLDER <- "data/"
+GWAS.DIR <- "data/gwas/"
 snps.to.keep <- read.table(sprintf("%s/snp_filt_list_wX_v3.txt", DATA.FOLDER), header=FALSE, 
     colClasses="character")
 
@@ -89,9 +89,9 @@ getData <- function(trait){
        # for each trait
     list.ds <- lapply(list.prefixes, function(prefix) {
         dat.1 <- fread(sprintf("%s/ukb24983_v2_hg19.%s_%s.genotyped.glm.linear", in_dir, trait, prefix), data.table=FALSE)
-        
+        colnames(dat.1) <- c("CHROM", "POS", "ID", "REF", "ALT", "A1", "TEST", "OBS_CT", "BETA", "SE", "T_STAT", "P")
         colnames(dat.1)[1:3] <- c("CHR", "BP", "SNP");
-        
+			    
         rownames(dat.1) <- dat.1$SNP
 
         # remove NAs
@@ -135,7 +135,7 @@ runM1 <- function(trait){
     print(parallel::detectCores())
     options(mc.cores = parallel::detectCores())
     rstan_options(auto_write = TRUE)
-    fit1 <- stan(file = "models/model1_no_loglik.stan",  
+    fit1 <- stan(file = "src/04_bmm/models/model1_no_loglik.stan",  
             data = dat$dat,    
             chains = 4, warmup = 200, iter = 600, cores = 4, refresh = 200)
     print("SAVING")
@@ -148,14 +148,14 @@ runM1 <- function(trait){
 
 runM2 <- function(trait){
     # run model 2 for a specified trait
-
+    
     dat <- loadDat(trait)
     dat$dat$K <- 4
 
     print(parallel::detectCores())
     options(mc.cores = parallel::detectCores())
     rstan_options(auto_write = TRUE)
-    fit2 <- stan(file = "models/model2.stan",  
+    fit2 <- stan(file = "src/04_bmm/models/model2.stan",  
             data = dat$dat,    
             chains = 4, warmup =200, iter = 600, cores = 4, refresh = 200)
   
@@ -174,7 +174,7 @@ runM2_alt <- function(trait){
     print(parallel::detectCores())
     options(mc.cores = parallel::detectCores())
     rstan_options(auto_write = TRUE)
-    fit2 <- stan(file = "models/model2_alt.stan",  
+    fit2 <- stan(file = "src/04_bmm/models/model2_alt.stan",  
             data = dat$dat,    
             chains = 4, warmup =200, iter = 600, cores = 4, refresh = 200)
   

@@ -1,0 +1,8 @@
+*.*~
+*.*#
+*.rds
+logs/*
+data/*
+phefiles/*
+tmp*
+*.ipynb_checkpoints*

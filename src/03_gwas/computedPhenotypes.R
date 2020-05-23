@@ -1,10 +1,34 @@
 # computedPhenotypes.R
 # E Flynn
-# Updated - 11/15/17
+# Updated - 5/22/2020
 #
 # Code for computing derived phenotypes
 
+require('tidyverse')
+
 # --- WHR --- #
+wc <- read.table("phefiles/INI48.phe")
+hc <- read.table("phefiles/INI49.phe")
+colnames(wc) <- c("ID", "ID2", "wc")
+colnames(hc) <- c("ID", "ID2", "hc")
+
+# remove missing
+wc_f <- wc[wc[,3] > 0,]
+hc_f <- hc[hc[,3] > 0,]
+
+# remove outside 6 sd
+mu <- mean(phe2[,3])
+s <- sd(phe2[,3])
+cut1 <- mu - 6*s
+cut2 <- mu + 6*s
+keep.rows2 <- (phe2[,3] > cut1 & phe2[,3] < cut2)
+phe3 <- phe2[keep.rows2, ]
+print(sprintf("Removed %s indiviuals who were outside 6sd.", nrow(phe2)-nrow(phe3)))
+
+
+# remove outside 6sd of mean
+
+# calculate
 
 
 # --- FEV-1/PVC --- #

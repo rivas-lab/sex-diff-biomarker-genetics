@@ -6,7 +6,7 @@
 # Retrieves sex labels and then filters to remove 151k individuals not included in the analysis. 
 
 COVARIATE_MATRIX <- '/oak/stanford/groups/mrivas/ukbb24983/sqc/ukb24983_GWAS_covar.phe'
-PHE_OUT_DIR <- '/scratch/PI/mrivas/users/erflynn/sex_div_gwas/phefiles'
+PHE_OUT_DIR <- 'phefiles'
 
 # read in covariate matrix
 cov_mat <- read.table(COVARIATE_MATRIX, header=TRUE)
