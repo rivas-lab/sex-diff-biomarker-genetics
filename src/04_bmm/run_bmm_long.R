@@ -157,7 +157,7 @@ runM2 <- function(trait){
     rstan_options(auto_write = TRUE)
     fit2 <- stan(file = "tmp_models_tfr/m2_2.stan",  
             data = dat$dat,    
-            chains = 4, warmup =200, iter = 600, cores = 4, refresh = 200)
+            chains = 4, warmup =1000, iter = 2000, cores = 4, refresh = 200)
   
     print(fit2, pars=c("sigmasq", "pi", "Sigma", "lp__"), probs=c(0.025, 0.5, 0.975), digits_summary=5)
     print("SAVING")

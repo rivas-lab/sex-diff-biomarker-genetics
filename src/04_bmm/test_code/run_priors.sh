@@ -17,6 +17,7 @@ ml load R/3.5.1
 ml load gcc/8.1.0
 
 model=$1
+trait=$2
 param_id=$SLURM_ARRAY_TASK_ID
 
-Rscript src/04_bmm/test_code/bmm_priors4.R ${model} ${param_id}
+Rscript src/04_bmm/test_code/bmm_priors4.R ${model} ${param_id} ${trait}

@@ -24,7 +24,8 @@ require('parallel')
 
 
 DATA.FOLDER <- "data/"
-GWAS.DIR <- "data/gwas/"
+#GWAS.DIR <- "data/gwas/"
+GWAS.DIR <- "data/gwas_0522/"
 snps.to.keep <- read.table(sprintf("%s/snp_filt_list_wX_v3.txt", DATA.FOLDER), header=FALSE, colClasses="character")
 
 # PARSE ARGUMENTS
@@ -32,15 +33,19 @@ args = commandArgs(trailingOnly=TRUE)
 
 model <- as.numeric(args[1])
 param_id <- args[2]
-if (length(args)==3){
+trait <- args[3]
+if (length(args)==4){
     sim_flag="sim"
 } else {
     sim_flag=""
 }
-trait <- "Testosterone"
+#trait <- "Testosterone"
+#trait <- "lfr"
 ndim <- 2
-model_dir <- sprintf("tmp_models_%s8/", sim_flag)
-out_dir <- sprintf("data/vary_priors_%s8", sim_flag)
+#model_dir <- sprintf("tmp_models_%s8/", sim_flag)
+model_dir <- sprintf("tmp_models_%stfr/", sim_flag)
+#out_dir <- sprintf("data/vary_priors_%s8", sim_flag)
+out_dir <- sprintf("data/vary_priors_%s%s", sim_flag, trait)
 in_dir <- GWAS.DIR
 suffix <- ""
 
