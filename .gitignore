@@ -3,6 +3,7 @@
 *.rds
 logs/*
 data/*
+data2/*
 phefiles/*
 tmp*
 *.ipynb_checkpoints*

@@ -5,18 +5,10 @@
 #SBATCH --nodes=4
 #SBATCH --time=2:00:00 
 #SBATCH --partition=rbaltman,owners
-#SBATCH --mem=10000
-# usage:
-#    sbatch submit_run_bmm.sh <model> <trait> <ndim>  <outdir> <indir>
+#SBATCH --mem=20000
 
-
-
-#ml r-rstan
 ml purge
 ml load R/3.5.1
 ml load gcc/8.1.0
 
-model_id=$1
-params_id=$2
-
-Rscript src/05_loo/compute_LL.R ${model_id} ${params_id} $SLURM_ARRAY_TASK_ID
+Rscript src/05_loo/extract_loo.R $SLURM_ARRAY_TASK_ID
