@@ -1,0 +1,85 @@
+---
+title: "Fig3 Betas"
+author: "E Flynn"
+date: "7/28/2020"
+output: html_document
+---
+
+Code for plotting the beta values in Figure 3. 
+
+```{r}
+require(tidyverse)
+require(latex2exp)
+```
+
+Grab the testosterone data
+```{r}
+m2_f <- read_csv("results/m2_biomarker_f_spec.csv")
+m2_m <- read_csv("results/m2_biomarker_m_spec.csv")
+m2_s <- read.csv("results/m2_biomarker_shared.csv", 
+                 header=TRUE, stringsAsFactors = FALSE)
+
+f_test <- m2_f %>% filter(trait=="Testosterone") %>% mutate(type="female-specific")
+m_test <- m2_m %>% filter(trait=="Testosterone") %>% mutate(type="male-specific")
+s_test <- m2_s %>% filter(trait=="Testosterone") %>% mutate(type="shared")
+
+test_df <- do.call(rbind, list(f_test, m_test, s_test))
+```
+
+Make the three plots showing the betas in males vs females across genes
+```{r}
+ggplot(test_df, aes(x=B.f, y=B.m, color=type))+
+  geom_hline(yintercept=0)+
+  geom_vline(xintercept=0)+
+  geom_point(aes(color=type),alpha=0.8)+
+  scale_color_manual(values=c("#FC8D62","#8DA0CB", "gray" ))+
+  geom_errorbar(aes(ymin=B.m-SE.m, ymax=B.m+SE.m, color=type))+
+  geom_errorbarh(aes(xmin=B.f-SE.f, xmax=B.f+SE.f, color=type))+
+  theme(panel.background = element_blank(),
+        panel.grid.minor = element_blank(), 
+        legend.title = element_blank(),
+        legend.key = element_rect(fill = NA, color = NA))+
+  xlab(TeX("Estimated effect size ($\\hat{\\beta}_f$) in females"))+
+  ylab(TeX("Estimated effect size ($\\hat{\\beta}_m$) in males"))+
+  ylim(-0.4, 0.3)+
+  xlim(-0.4, 0.2)
+ggsave("fig3_all.pdf", dpi="print")
+
+
+ggplot(test_df %>% filter(type=="female-specific"), 
+       aes(x=B.f, y=B.m, color=type))+
+  geom_hline(yintercept=0)+
+  geom_vline(xintercept=0)+
+  geom_point(aes(color=type),alpha=0.8)+
+  scale_color_manual(values=c("#FC8D62"))+
+  geom_errorbar(aes(ymin=B.m-SE.m, ymax=B.m+SE.m, color=type))+
+  geom_errorbarh(aes(xmin=B.f-SE.f, xmax=B.f+SE.f, color=type))+
+  theme(panel.background = element_blank(),
+        panel.grid.minor = element_blank(), 
+        legend.title = element_blank(), 
+        legend.key = element_rect(fill = NA, color = NA))+
+  xlab(TeX("Estimated effect size ($\\hat{\\beta}_f$) in females"))+
+  ylab(TeX("Estimated effect size ($\\hat{\\beta}_m$) in males"))+
+  ylim(-0.4, 0.3)+
+  xlim(-0.4, 0.2)
+ggsave("fig3_fspec.pdf", dpi="print")
+
+ggplot(test_df %>% filter(type=="male-specific"), 
+       aes(x=B.f, y=B.m, color=type))+
+  geom_hline(yintercept=0)+
+  geom_vline(xintercept=0)+
+  geom_point(aes(color=type),alpha=0.8)+
+  scale_color_manual(values=c("#8DA0CB"))+
+  geom_errorbar(aes(ymin=B.m-SE.m, ymax=B.m+SE.m, color=type))+
+  geom_errorbarh(aes(xmin=B.f-SE.f, xmax=B.f+SE.f, color=type))+
+  theme(panel.background = element_blank(),
+        panel.grid.minor = element_blank(), 
+        legend.title = element_blank(), 
+        legend.key = element_rect(fill = NA, color = NA))+
+  xlab(TeX("Estimated effect size ($\\hat{\\beta}_f$) in females"))+
+  ylab(TeX("Estimated effect size ($\\hat{\\beta}_m$) in males"))+
+  ylim(-0.4, 0.3)+
+  xlim(-0.4, 0.2)
+ggsave("fig3_mspec.pdf", dpi="print")
+
+```

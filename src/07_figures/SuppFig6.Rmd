@@ -1,0 +1,65 @@
+---
+title: "SuppFig6"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+Code for plotting the effect size estimates (betas) of the validation data versus the discovery data.
+
+```{r}
+require('tidyverse')
+```
+
+Read in the data
+```{r}
+whr_validNWB <- read_csv("valid_results/whr_compare.csv") %>% filter(sex=="female")
+leg_fp_validNWB <- read_csv("valid_results/leg_fp_compare.csv") %>% filter(sex=="female")
+arm_fp_validNWB <- read_csv("valid_results/arm_fp_compare.csv") %>% filter(sex=="female")
+trunk_fp_validNWB <- read_csv("valid_results/trunk_fp_compare.csv") %>% filter(sex=="female")
+testosterone <- read_csv("valid_results/Testosterone_compare.csv")
+```
+
+```{r}
+makeValidationPlot <- function(trait.name, trait.df){
+  trait.df <- trait.df %>% filter(post > 0.8) 
+
+  # look at the f genes for anthropometric traits
+  trait.df2 <- trait.df %>% filter(sex=="male")
+  
+  # ------ M vs F------- #
+  
+  trait.df_m.f <- rbind(trait.df2 %>% 
+                     select(ID, B.f, SE.f, P.f, B.f.v, SE.f.v) %>% 
+                     rename(B=B.f, SE=SE.f, P=P.f, B.v=B.f.v, SE.v=SE.f.v) %>% 
+                     mutate(sexB="Beta_f"),
+                   trait.df2 %>% 
+                     select(ID, B.m, SE.m, P.m, B.m.v, SE.m.v) %>% 
+                     rename(B=B.m, SE=SE.m, P=P.m, B.v=B.m.v, SE.v=SE.m.v) %>% 
+                     mutate(sexB="Beta_m"))
+  dat_text <- data.frame(
+    label = c(rsq_f, rsq_m),
+    sexB   = c("Beta_f", "Beta_m"))
+  
+  
+  ggplot(trait.df_m.f, aes(x=B, y=B.v))+
+    geom_point()+
+    geom_errorbar(aes(ymin=B.v-SE.v, ymax=B.v+SE.v), alpha=0.4)+
+    geom_errorbarh(aes(xmin=B-SE, xmax=B+SE), alpha=0.4)+
+    xlab("Discovery")+
+    ylab("Validation") +
+    geom_smooth(method = "lm", se = TRUE)+
+    geom_hline(yintercept=0, linetype=2, alpha=0.1)+
+    geom_vline(xintercept=0, linetype=2, alpha=0.1)+
+    ggtitle(sprintf("%s  (male-specific variants)", trait.name))+ 
+    facet_wrap(~sexB)+ 
+    theme(panel.spacing = unit(2, "lines"))+ 
+    geom_text(
+    data    = dat_text,
+    mapping = aes(x = -Inf, y = -Inf, label = label),
+    hjust   = -0.1,
+    vjust   = -1, 
+    size=3
+  )
+  ggsave(sprintf("s6_validation_%s.pdf", trait.name), width=8, height=4.5, dpi="print")
+}
+```

@@ -1,0 +1,262 @@
+---
+title: "Supp Fig 1 & 2"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+Code for creating supplementary figures 1 and 2, which compare our model's anthropometric estimates to those from the literature. 
+
+```{r}
+require('tidyverse')
+require("readxl")
+options(stringsAsFactors=FALSE)
+
+```
+
+Data from Rawlik et al
+```{r}
+ref_dat <- read.table("tables/ref_data.txt", header=TRUE)
+ref_dat2 <- read_csv("tables/ref_dat2.csv") %>%
+  rename("trait"="X1")
+```
+
+
+```{r}
+ # supplement for Rask-andersen et al
+ra_df <- read_excel("41467_2018_8000_MOESM4_ESM.xlsx", sheet=1, skip=2)
+sm_ra_df <- ra_df %>% 
+  select(CHR, Locus_range,  BP,`Locus name`, AFR, LFR, TFR ) %>% 
+  separate(`Locus name`,  into=c("gene", "type"), sep="\\(") %>% 
+  separate_rows(gene, sep=",") %>% 
+  mutate(gene=str_replace_all(gene, " ", "")) %>%
+  separate(Locus_range, into=c("loc_min", "loc_max"), sep="\\.\\.")
+
+f_afr <- sm_ra_df %>% filter(str_detect(AFR,"f" ))
+m_afr <- sm_ra_df %>% filter(str_detect(AFR,"m") )
+f_lfr <- sm_ra_df %>% filter(str_detect(LFR,"f" ))
+m_lfr <- sm_ra_df %>% filter(str_detect(LFR,"m" ))
+f_tfr <- sm_ra_df %>% filter(str_detect(TFR,"f" ))
+m_tfr <- sm_ra_df %>% filter(str_detect(TFR,"m" ))
+
+# WHR data from Pulit et al
+pulit_whr <- read_tsv("pulit_whr.txt")
+pulit_whr_sm <- pulit_whr %>% 
+  select(SNP, Chr, Pos, `Male or Female specific`) %>% 
+  rename(sex=`Male or Female specific`) 
+
+f_whr <- pulit_whr_sm %>% 
+  filter(sex=="FEMALE") %>% arrange(Chr, Pos)
+m_whr <- pulit_whr_sm %>% filter(sex=="MALE") %>% 
+  arrange(Chr, Pos)
+
+f_spec <- read_csv("results/m2_anthro_f_spec.csv")
+m_spec <- read_csv("results/m2_anthro_m_spec.csv")
+shared <- read_csv("results/m2_anthro_shared.csv")
+
+# intersections of results
+f_afr_overlap <- intersect((f_spec %>% filter(trait=="arm_fp"))$GENE, f_afr$gene)
+m_afr_overlap <- intersect((m_spec %>% filter(trait=="arm_fp"))$GENE, m_afr$gene)
+f_lfr_overlap <- intersect((f_spec %>% filter(trait=="leg_fp"))$GENE, f_lfr$gene) 
+f_tfr_overlap <- intersect((f_spec %>% filter(trait=="trunk_fp"))$GENE, f_tfr$gene)
+
+```
+
+Read in our Anthropometric estimates 
+```{r}
+anthro_full <- read_csv("results/m1_anthro_1020.csv")
+
+# make names pretty
+anthro_df2 <- anthro_full %>% 
+  mutate(trait.name=case_when(
+    trait=="INI21001" ~ "BMI",
+    trait=="INI20150" ~ "FEV-1",
+    trait=="INI23099" ~ "body_fat_percentage",
+    trait=="INI23105" ~ "basal_metabolic_rate",
+    trait=="INI3063" ~ "FVC",
+    trait=="INI3064" ~ "PEF",
+    trait=="INI4079" ~ "BP-diastolic",
+    trait=="INI4080" ~  "BP-systolic",
+    trait=="INI49" ~ "hip_circum" ,
+    trait=="INI48" ~ "waist_circum" ,
+    trait=="whr" ~ "waist-hip-ratio",
+    trait=="INI50" ~  "height",
+    trait=="leg_fp" ~  "leg-fat-ratio",
+    trait=="arm_fp" ~  "arm-fat-ratio",
+    trait=="trunk_fp" ~  "trunk-fat-ratio",
+    TRUE ~ trait))
+
+anthro_df2 <- anthro_df2 %>% 
+  mutate(trait.name=str_replace_all(trait.name,"_", " "))
+```
+
+Put anthropometric data from reference and our estimates together
+```{r}
+# set it up to combine with other data
+to_comb1 <- anthro_df2 %>% 
+  select(trait.name, rg.c, rg.l, rg.u, hf.c, hm.c) %>%
+  rename(rg=rg.c, h.f=hf.c, h.m=hm.c) %>% 
+  mutate(source="estimated")
+
+# format reference data
+to_comb2 <- ref_dat %>% 
+  mutate(trait.name=str_replace_all(trait.name,"_", " ")) %>%
+  select(-se) %>% mutate(source="reference") %>% 
+  filter(trait.name %in% to_comb1$trait.name)
+
+# put together
+comb_dat <- rbind(to_comb1, to_comb2) 
+comb_dat1 <- data.frame(comb_dat)
+comb_dat1$trait.name <- factor(comb_dat1$trait.name, levels=anthro_df2$trait.name[order(-anthro_df2$rg.c)])
+```
+
+
+```{r}
+p1 <- ggplot(comb_dat1, aes(x=trait.name, y=rg, colour=source))+
+  geom_errorbar(aes(ymin=rg.l, ymax=rg.u), position = position_dodge((0.9)))+
+  geom_point( position = position_dodge((0.9)))+
+  ylim(0,1.02)+
+   scale_color_manual(breaks = c("estimated", "reference"),
+                        values=c("purple", "gray"))+
+  theme(axis.text.x=element_text(angle=90,hjust=1, vjust=0.5),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.key = element_rect(fill = NA, color = NA),
+        axis.line = element_line(colour = "black"))+
+  ylab("genetic correlation")+
+  xlab("")
+
+ggsave("supp_fig1_1021.pdf",  height=4, width=8, dpi="print")
+```
+
+
+Include the error bars and make a correlation plot
+```{r}
+ref_dat2.2 <- ref_dat2 %>% mutate(trait.name=case_when(
+  trait=="Height" ~ "height",
+  trait=="BF%" ~ "body fat percentage",
+  trait=="BMR" ~ "basal metabolic rate",
+  trait=="WC" ~ "waist circum",
+  trait=="HC" ~ "hip circum",
+  trait=="WHR" ~ "waist-hip-ratio",
+  trait=="BPdia" ~ "BP-diastolic",
+  trait=="BPsys" ~ "BP-systolic",
+  trait=="FEV1" ~ "FEV-1",
+  trait=="FEV1/FVC" ~ "FEV_FVC",
+  TRUE ~ trait
+)) 
+
+ref_dat2.4 <- ref_dat2.2 %>% 
+  select(trait.name, hm_est, hm_se, hm_est_1, hm_se_1) %>%
+  rename(hf_est=hm_est_1, hf_se=hm_se_1) %>%
+  pivot_longer(-trait.name) %>%
+  separate(name, into=c("sex", "type"), sep="_") %>%
+  pivot_wider(id_cols=c("trait.name", "sex"), names_from="type", values_from="value") %>%
+  mutate("lower_ci"=est-1.96*se, "upper_ci"=est+1.96*se) %>%
+  select(-se) %>%
+  mutate(source="reference")
+ref2 <- ref_dat %>% 
+  select(trait.name, h.f, h.m) %>% 
+  mutate(source="reference")  %>%
+  mutate(trait.name=str_replace_all(trait.name,"_", " "))  %>% 
+  filter(trait.name %in% anthro_df2$trait.name)
+anthro_h <- anthro_df2 %>% 
+  select(trait.name, hf.c, hm.c) %>% mutate(source="estimated") %>%
+  rename(h.f=hf.c, h.m=hm.c)
+
+anthro_h.2 <- anthro_df2 %>% 
+  select(trait.name, hf.c, hf.l, hf.u, hm.c, hm.l, hm.u) %>%
+  pivot_longer(-trait.name) %>%
+  separate(name, into=c("sex", "type"), sep="\\.") %>%
+  pivot_wider(id_cols=c("trait.name", "sex"), names_from="type", values_from="value") %>% 
+  rename("est"="c", "lower_ci"="l", "upper_ci"="u")  %>%
+  mutate(source="estimated")
+
+# add the reference heritability for rask-andersen
+ra_herit <- list(
+  c("arm-fat-ratio","hf",0.25, 0.22, 0.28),
+  c("arm-fat-ratio","hm",0.15, 0.13, 0.17),
+  c("leg-fat-ratio","hf",0.21, 0.18, 0.24),
+  c("leg-fat-ratio","hm",0.13,0.11,0.15),
+  c("trunk-fat-ratio","hf",0.23, 0.20, 0.26),
+  c("trunk-fat-ratio","hm",0.11,0.09,0.13))
+ra_herit_df <- as_tibble(t(data.frame(ra_herit))) 
+colnames(ra_herit_df) <- colnames(anthro_h.2)[1:5]
+ra_herit_df2 <- ra_herit_df %>%
+  mutate(est=as.numeric(est),
+         lower_ci=as.numeric(lower_ci),
+         upper_ci=as.numeric(upper_ci)
+         ) %>%
+  mutate(source="reference")
+
+
+comb_alt <- anthro_h.2 %>% 
+  bind_rows(ref_dat2.4 %>% 
+              filter(trait.name %in% anthro_h.2$trait.name)) %>%
+  bind_rows(ra_herit_df2)
+comb_alt2 <- comb_alt %>% 
+  mutate(grp=paste(sex, source, sep="_")) %>%
+  mutate(trait.name=factor(trait.name, levels=levels(comb_dat1$trait.name))) %>%
+  mutate(sex=ifelse(sex=="hf", "female", "male"))
+
+```
+
+Plot heritabilities
+```{r}
+p2 <- ggplot(comb_alt2, aes(x=trait.name, y=est, group=grp))+
+  geom_point(aes(color=sex, shape=source), 
+             position=position_dodge(0.9), size=1.3)+
+  geom_errorbar(aes(ymin=lower_ci, ymax=upper_ci, color=sex),
+                position=position_dodge(0.9), width=0.8)+
+  scale_colour_manual(values=c("#FC8D62", "#8DA0CB"))+
+  theme(axis.text.x=element_text(angle=90,hjust=1, vjust=0.5),
+        panel.background = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid = element_blank(),
+        legend.key = element_rect(fill = NA, color = NA),
+                axis.line = element_line(colour = "black"))+
+  ylab("heritability")+
+  xlab("")
+ggsave("supp_fig1b.pdf", height=4, width=8, dpi="print")
+```
+
+Compare data directly with a correlation plot
+```{r}
+comp_vals <- comb_alt2 %>% 
+  select(trait.name, sex, est, source) %>%
+  pivot_wider(id_cols=c("trait.name", "sex"), 
+              names_from="source", 
+              values_from="est")
+
+summary(lm(estimated ~ reference, data=comp_vals))
+
+comp_vals_err <- comb_alt2 %>% 
+  select(-grp) %>%
+  pivot_longer(c(est, lower_ci, upper_ci)) %>%
+  pivot_wider(id_cols=c("trait.name", "sex"), 
+              names_from=c("source", "name"), 
+              values_from="value")
+
+# correlation plot comparison
+ggplot(comp_vals_err, 
+       aes(x=reference_est, y=estimated_est))+
+  geom_point(aes(color=sex)) +
+  geom_errorbar(aes(ymin=estimated_lower_ci, ymax=estimated_upper_ci), 
+                width=0, alpha=0.8)+
+  geom_errorbarh(aes(xmin=reference_lower_ci, xmax=reference_upper_ci),
+                 alpha=0.8)+
+  geom_abline(intercept = 0, slope=1, color="dark gray")+
+  theme(panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        panel.background = element_blank(),
+        legend.key = element_rect(fill = NA, color = NA)) +
+  scale_color_manual(values=c("#FC8D62", "#8DA0CB"))+
+  ylab("estimated heritability")+
+  xlab("reference heritability")+
+  ylim(0.05,0.6)+
+  xlim(0.05,0.6)
+ggsave("supp_fig2.pdf")
+
+```
+
+

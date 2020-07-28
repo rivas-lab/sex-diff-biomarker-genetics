@@ -1,0 +1,67 @@
+---
+title: "SuppFig8"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+Code for making the MR plots for Supplementary Figure 8
+
+Read in the data for traits we want to plot.
+```{r}
+f_spec <- read_tsv("mr_input_f_spec.txt")
+m_spec <- read_tsv("mr_input_m_spec.txt")
+trait_df <- read_csv("mr_results_formatted.csv")
+
+loadFitData <- function(type, trait){
+  load(sprintf("mr_results/mr_%s_spec_%s.RData", type, trait))
+  return(my.l$dat)
+}
+
+height_m_giant <- trait_df %>% filter(id.outcome=="89")
+height_m_giant_fit <- loadFitData("m","89")
+
+height_f_giant <- trait_df %>% filter(id.outcome=="89")
+height_f_giant_fit <- loadFitData("f","89")
+
+height_f_uk <- trait_df %>% filter(id.outcome=="UKB-b:10787")
+bmi_f_uk <- trait_df %>% filter(id.outcome=="UKB-b:19953")
+bmi_f_giant <- trait_df %>% filter(id.outcome=="835")
+bmi_f_giantm <- trait_df %>% filter(id.outcome=="785")
+
+waist_circ_f <- trait_df %>% filter(id.outcome=="UKB-b:9405")
+t2d_m <- trait_df %>% filter(id.outcome=="24")
+```
+
+
+Code for making the MR plot for a trait
+```{r}
+
+make_trait_mr_plot <- function(my_trait, ss_table){
+  exp_sm <- ss_table %>% 
+      select(SNP, beta, se) %>% 
+      rename(b_exp=beta, se_exp=se)
+  
+  out_sm <- my_trait %>% 
+    select(SNP, beta.outcome, se.outcome) %>% 
+    rename(b_out=beta.outcome, se_out=se.outcome)
+  
+  exp_out <- right_join(exp_sm, out_sm) 
+  
+  ggplot(exp_out, aes (x=b_exp, y=b_out))+
+    geom_errorbar(aes(ymin=b_out-se_out, ymax=b_out+se_out))+
+    geom_errorbarh(aes(xmin=b_exp-se_exp, xmax=b_exp+se_exp))+
+    geom_point()+
+    geom_abline(intercept=my_trait[1,]$se,
+                slope=my_trait[1,]$b, 
+                col="darkgreen")+
+    geom_abline(intercept=my_trait[2,]$se,
+                slope=my_trait[2,]$b, 
+                col="lightblue")+ 
+    geom_abline(intercept=my_trait[3,]$se,
+                slope=my_trait[3,]$b, 
+                col="blue")
+}
+
+make_trait_mr_plot(height_m_giant_fit, m_spec)
+
+```

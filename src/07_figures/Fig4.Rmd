@@ -1,0 +1,94 @@
+---
+title: "Fig4"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+Code to plot the MR results for Figure 4
+
+```{r}
+require('tidyverse')
+```
+
+Load the data and reformat
+```{r}
+mr_traits <- read_csv("mr_traits.csv")
+results_lst <- read_csv("mr_results.csv")
+
+trait_df <- left_join(results_lst, mr_traits, by=c("id.outcome"="id")) %>%
+  mutate("-log10 p-value"=-log10(pval)) %>%
+  mutate(sex=tolower(sex)) %>%
+  mutate(sex=ifelse(sex=="males and females", "combined", sex)) %>%
+  mutate(source=ifelse(consortium=="MRC-IEU", "UKBB", "Non-UKBB Consortia*")) %>%
+  mutate(grp=paste(source, sex)) %>%
+  mutate(Trait=case_when(
+    str_detect(trait, "prostate|Prostate") ~ "Prostate cancer",
+    str_detect(trait, "stroke|Stroke") ~ "Stroke", 
+    str_detect(trait, "diabetes|Diabetes") ~ "Type 2 Diabetes",
+    str_detect(trait, "menarche") ~ "Age of menarche",
+    str_detect(trait, "height") ~ "Height", 
+    str_detect(trait, "menopause") ~ "Age at menopause", 
+    str_detect(trait, "heart disease") ~ "Heart disease",
+    str_detect(trait, "Body mass index") ~ "Body mass index",
+    TRUE ~ trait)) %>%
+  select(-exposure) %>%
+  mutate(sex=case_when(
+    Trait=="Prostate cancer" ~ "males",
+    Trait %in% c("Age of menarche", "Age at menopause") ~ "females",
+    TRUE ~ sex)) %>%
+  mutate(exposure=case_when(
+    id.exposure=="f_spec" ~ "female-specific variants",
+    id.exposure=="m_spec" ~ "male-specific variants"
+  )) %>%
+  rename(`sex of outcome pop`=sex)
+
+
+trait_df$Trait <- factor(trait_df$Trait, levels=c("Body mass index", "Height", "Hip circumference", "Waist circumference", "Heart disease", "Type 2 Diabetes", "Stroke", "Prostate cancer", "Age of menarche", "Age at menopause") )
+```
+
+Plot for figure 4
+```{r}
+my_colors <- c("gray", "#FC8D62","#8DA0CB" )
+
+ggplot(trait_df %>%   
+         filter(method=="Inverse variance weighted (fixed effects)") , 
+       aes(x=exposure, y=b, color=`sex of outcome pop`, group=grp))+
+  geom_point(aes( shape=source, color=`sex of outcome pop`, 
+                  size=`-log10 p-value`), 
+             position=position_dodge(0.5), alpha=0.5) + 
+  geom_errorbar(aes(ymin=b-1.96*se, ymax=b+1.96*se, color=`sex of outcome pop`),
+                width=0, position=position_dodge(0.5))+
+  geom_hline(yintercept=0, linetype=2)+
+  ylab("beta")+
+  facet_wrap(~Trait, nrow=2)+
+  coord_flip()+
+  theme_bw()+
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black"))+
+  xlab("Testosterone exposure")+
+  scale_fill_manual(values=c(my_colors))+
+  scale_colour_manual(values=c(my_colors))+ 
+  theme(panel.spacing = unit(1, "lines"))+
+  ylab("effect size (beta)")
+ggsave("fig4.pdf", width=10.5, height=4.5, dpi="print")
+```
+
+```{r}
+num_tests <- nrow(mr_traits)*3*2 # 168
+
+pcut <- 0.05/num_tests
+trait_df %>% filter(pval < pcut) %>% arrange(pval) %>% select(exposure, Trait, method, nsnp, b, se, pval) 
+
+trait_df2 <- trait_df %>% arrange(pval) %>% select(exposure, Trait, id.outcome, method, nsnp, b, se, pval) %>%
+  unite(col="trait", c(Trait, id.outcome), sep=" || id:")
+
+trait_df2 %>% write_csv("mr_results_formatted.csv")
+```
+
+
+
+
+

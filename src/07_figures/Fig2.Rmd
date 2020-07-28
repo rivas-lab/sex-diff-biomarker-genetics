@@ -1,0 +1,162 @@
+---
+title: "Figure 2ab"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+Code for creating Figure parts A and B which show the genetic correlation and heritability.
+
+```{r}
+# load packages and dependencies
+require('tidyverse')
+require('reshape2')  
+```
+
+
+Read in model 1 data and clean it up
+```{r}
+m1_full<- read_csv("results/results_1021/m1_biomarker_1020.csv")
+biomarkers.poor <- c("Oestradiol", "Fasting_glucose", "Microalbumin_in_urine", "Rheumatoid_factor")
+m1_filt <- m1_full %>% filter(!trait %in% biomarkers.poor)
+
+# clean up names
+m1_filt2 <- m1_filt %>% 
+  mutate(trait=str_replace_all(trait, "_", " ")) %>%
+  mutate(trait=str_replace_all(trait, ".adjust.statins", " (statin-adj)")) %>% 
+  mutate(trait=ifelse(trait == "Glycated haemoglobin HbA1c","HbA1c", trait)) %>% 
+  filter(!trait %in% c("Apolipoprotein B", "LDL direct", "Cholesterol") ) %>%
+  mutate(trait=str_replace_all(trait, " \\(statin-adj\\)", ""))
+```
+
+
+### Genetic correlation plot
+```{r}
+p1 <- ggplot(m1_filt2, aes(x=trait, y=rg.c))+
+  geom_errorbar(aes(ymin=rg.l, ymax=rg.u), width=0.6) + 
+  geom_point(size=0.5)+
+  theme(axis.text.x=element_text(angle=90,hjust=1, vjust=0.5)) +
+  ylab("Genetic Correlation")+
+  xlab("")+
+  theme(panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        panel.background = element_blank()) 
+
+p1
+ggsave("fig2_gc_0518.pdf", height=4, width=8, dpi="print")
+
+```
+
+### Heritability plot
+
+Clean up data for heritability plot
+```{r}
+m1_full2 <- m1_filt %>% 
+  select(trait, c('hf.c','hm.c', 'hf.l', 'hf.u' ,'hm.l' ,'hm.u')) %>% 
+  gather(key="h_type", value="val", -trait) 
+m1_full2$sex <-sapply(m1_full2$h_type, function(x) 
+  strsplit(as.character(x), ".", fixed=TRUE)[[1]][[1]])
+m1_full2$int <- sapply(m1_full2$h_type, function(x) 
+  strsplit(as.character(x), ".", fixed=TRUE)[[1]][[2]])
+m1_full3 <- m1_full2 %>% 
+  select(-h_type) %>% 
+  unique() %>% 
+  filter(!is.na(val)) %>% 
+  mutate(val=as.numeric(val)) 
+
+m1_full4 <- dcast(m1_full3, trait + sex ~ int, value.var="val", fun.aggregate = min, na.rm = TRUE) 
+
+herit_df <- m1_full4 %>% 
+  rename(mid=c, low=l, up=u)  %>% 
+  mutate(sex=ifelse(sex=="hf", "female", ifelse(sex=="hm", "male", NA))) %>%
+  mutate(trait=str_replace_all(trait, "_", " "))
+
+herit_df2.1 <- herit_df %>% 
+  filter(!trait%in% c("Apolipoprotein B", "LDL direct", "Cholesterol") ) %>%
+  mutate(trait=str_replace_all(trait, " \\(statin-adj\\)", ""))
+```
+
+Plot heritability
+```{r}
+my.set2 <- c("#FC8D62", "#8DA0CB")  # colors
+
+p2 <- ggplot(herit_df2.1, aes(x=trait, y=mid, fill=sex))+
+  geom_bar(stat="identity", position=position_dodge())+
+  geom_errorbar(aes(ymin=low, ymax=up), position=position_dodge(0.9), color="black", width=0.5) + 
+  theme(axis.text.x=element_text(angle=90,hjust=1, vjust=0.5),
+     axis.title.x = element_text(margin = margin(t = 0, r = 0, b = 10, l = 0))) +
+  ylab("Heritability")+xlab("") +
+  theme(panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        panel.background = element_blank(),
+        legend.title = element_text(size = 8),
+        legend.text = element_text(size = 6))+ 
+  scale_fill_manual(values = my.set2) + 
+  scale_colour_manual(values=my.set2)
+
+ggsave("fig2_herit_0518.pdf", width=8, height=4, dpi="print")
+
+p2+theme(legend.position = "none")
+ggsave("fig2_herit_0518_no_legend.pdf", width=8, height=4, dpi="print")
+
+```
+
+### Menopause data
+Read in and clean up the data
+```{r}
+meno_df <- read_csv("results/results_1021/m1_menopause_results.csv")
+
+genetic_corr <- meno_df %>% 
+  select(-`pi[2]`) %>% 
+  rename(rg.pre_post.c=rg.pre_post,
+         rg.pre_male.c=rg.pre_male,
+         rg.post_male.c=rg.post_male)
+
+genetic_corr_long <- genetic_corr %>% 
+  gather(rg_type, value, -trait) %>% 
+  mutate(value=as.numeric(value)) %>%
+  mutate(rg_type=str_replace_all(rg_type, "rg.", ""))
+
+# fix labels
+gen_cor_df <- genetic_corr_long %>% 
+  separate(rg_type, c("group", "int"), sep="\\.") %>% 
+  spread(key="int", value="value")
+
+gen_cor_df2 <- gen_cor_df %>% 
+  rename(rg=c, rgl=l, rgu=u) %>% 
+  mutate(trait=str_replace_all(trait, "_", " "),
+      group=ifelse(group=="post_male","post-menopausal women vs. men",
+                   ifelse(group=="pre_male","pre-menopausal women vs. men", 
+                          "pre- vs. post-menopausal women"))) %>% 
+  filter(trait != "Potassium in urine")
+```
+
+Plot menopause genetic correlations
+```{r}
+my.set3 <- c("#66C2A5", "#E78AC3", "#E5C494")
+
+p3 <- ggplot(gen_cor_df2, aes(x=trait, y=rg, color=group))+
+  geom_point(position=position_dodge(0.9))+
+  geom_errorbar(aes(ymin=rgl, ymax=rgu),
+                position=position_dodge(0.9), width=0.5) +
+  theme(axis.text.x=element_text(angle=90,hjust=1, vjust=0.5))+
+  ylab("Genetic Correlation")+
+  xlab("Trait") +
+  scale_fill_manual(values= my.set3)+
+  scale_colour_manual(values=my.set3)+
+  theme(panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        panel.background = element_blank(), 
+        legend.title = element_blank(),
+        legend.key = element_rect(fill = NA, color = NA),
+        legend.text = element_text(size = 6))+
+  xlab("")
+
+p3
+ggsave("fig_meno_gc_0518.pdf", width=8, height=4, dpi="print")
+
+p3+theme(legend.position="none")
+ggsave("fig_meno_gc_0518_no_legend.pdf", width=8, height=4, dpi="print")
+
+```
+

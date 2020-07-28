@@ -1,0 +1,257 @@
+---
+title: "SuppFig_ParamVary"
+author: "E Flynn"
+date: "5/18/2020"
+output: html_document
+---
+
+
+```{r}
+require('tidyverse')
+require('gridExtra')
+```
+
+
+Read parameters
+```{r}
+# estimated parameters
+dat_m1_est <- read_csv("vary_param_m1_estimates.csv")
+dat_m2_est <- read_csv("vary_param_m2_estimates.csv")
+load("m2_vary_params/m2_fit_1.RData")
+m2_1 <- data.frame(summary(fit, pars=c("pi", "sigmasq", "lp__"))$summary)
+m2_1$parameter <- rownames(m2_1) 
+m2_1.2 <- m2_1 %>% 
+  rename(est="X50.", ci_h="X97.5.", ci_l="X2.5.") %>%
+  mutate(fit_params="m2_1") %>%
+  select(colnames(dat_m2_est)) 
+dat_m2_est <- dat_m2_est %>% bind_rows(m2_1.2)
+
+# loo values
+m1_compare <- read_csv("compare_m1.csv") %>% 
+  rename(params_id=X1) %>%
+  mutate(model_id=str_extract_all(params_id, "[0-9]+")) %>%
+  mutate(fit_params=sprintf("m1_%s", model_id))
+m2_compare <- read_csv("compare_m2.csv") %>% 
+  rename(params_id=X1) %>%
+  mutate(model_id=as.numeric(str_extract_all(params_id, "[0-9]+"))) %>%
+  mutate(model_id=as.character(ifelse(model_id >=3, model_id+1,model_id))) %>%
+  mutate(fit_params=sprintf("m2_%s", model_id))
+
+# models c(1,2,4,5,6,7,8) -- 3 is missing
+
+```
+
+Reformat the parameter names
+```{r}
+m1_params_list <- list(
+    "1"=list("tau"=2.5, "lkj"=2, "beta"=list(1,1)),
+    "2"=list("tau"=2.5, "lkj"=2, "beta"=list(2,2)),
+     "3"=list("tau"=2.5, "lkj"=2, "beta"=list(5,5)),
+     "4"=list("tau"=2.5, "lkj"=2, "beta"=list(2,1)),
+     "5"=list("tau"=2.5, "lkj"=2, "beta"=list(1,2)),
+     "6"=list("tau"=2.5, "lkj"=0.5, "beta"=list(1,1)),
+     "7"=list("tau"=2.5, "lkj"=1, "beta"=list(1,1)),
+     "8"=list("tau"=2.5, "lkj"=1.5, "beta"=list(1,1)),
+     "9"=list("tau"=2.5, "lkj"=2, "beta"=list(5,1)),
+     "10"=list("tau"=2.5, "lkj"=2.5, "beta"=list(1,1)),
+     "11"=list("tau"=2.5, "lkj"=3, "beta"=list(1,1)),
+    "12"=list("tau"=0.5, "lkj"=2, "beta"=list(1,1)),
+     "13"=list("tau"=25, "lkj"=2, "beta"=list(1,1))
+)
+
+m2_params_list <- list(
+    "1" =list("gamma"=list(1,1), "dl"=list(1,1,1,1)),
+    "2" =list("gamma"=list(10,1), "dl"=list(1,1,1,1)),# <--- 2
+    "3" =list("gamma"=list(10,1), "dl"=list(2,1,1,1)),
+    "4" =list("gamma"=list(20,2), "dl"=list(1,1,1,1)),#
+    "5" =list("gamma"=list(20,2), "dl"=list(2,1,1,1)),
+    "6" =list("gamma"=list(5,1), "dl"=list(1,1,1,1)),# <--- 3
+    "7" =list("gamma"=list(10,1), "dl"=list(2,1,1,2)),# <--- 1
+    "8" =list("gamma"=list(10,1), "dl"=list(2,2,2,2))
+)
+
+m1_params_formatted <- lapply(m1_params_list, function(x) sprintf("beta(%s,%s),lkj=%s,tau=%s", x$beta[[1]], x$beta[[2]],x$lkj, x$tau))
+# m2_params_formatted <- lapply(m2_params_list, function(x) sprintf("dirichlet(%s,%s,%s,%s),inv_gamma(%s,%s)", x$beta, x$beta, x$beta, x$beta, x$gamma, x$gamma))
+
+m2_params_formatted <- lapply(m2_params_list, function(x) sprintf("dirichlet(%s,%s,%s,%s),inv_gamma(%s,%s)", x$dl[[1]], x$dl[[2]], x$dl[[3]], x$dl[[4]], x$gamma[[1]], x$gamma[[2]]))
+
+```
+
+Add the model parameters
+```{r}
+dat_m1_est$model_id <- sapply(dat_m1_est$fit_params, function(x) strsplit(x, "_")[[1]][[2]])
+dat_m1_est$param_vals <- unlist(m1_params_formatted[dat_m1_est$model_id])
+
+dat_m2_est$model_id <- sapply(dat_m2_est$fit_params, function(x) strsplit(x, "_")[[1]][[2]])
+dat_m2_est$param_vals <- unlist(m2_params_formatted[dat_m2_est$model_id])
+
+m1_compare$param_vals <- unlist(m1_params_formatted[unlist(m1_compare$model_id)])
+m2_compare$param_vals <- unlist(m2_params_formatted[unlist(m2_compare$model_id)])
+
+```
+
+Clean up data
+```{r}
+dat_m1_est2 <- dat_m1_est %>% 
+  filter(parameter %in% c("pi[2]", "Sigma[1,1]", 
+                          "Sigma[1,2]", "Sigma[2,2]", 
+                          "Omegacor[1,2]")) %>%
+  mutate(parameter=case_when(
+    parameter=="pi[2]" ~ "pi[1]",
+    parameter=="Omegacor[1,2]" ~ "rg",
+    TRUE ~ parameter
+  ))
+
+summary(dat_m1_est2$Rhat)
+summary(dat_m1_est2$n_eff)
+
+dat_m2_est2 <- dat_m2_est %>% 
+  filter(!parameter %in% c("pi[1]", "lp__")) %>%
+  mutate(parameter=case_when(
+    parameter=="pi[2]" ~ "pi[1]",
+    parameter=="pi[3]" ~ "pi[2]",
+    parameter=="pi[4]" ~ "pi[3]",
+    TRUE ~ parameter
+  ))
+
+# set up factor levels and account for missing m3
+dat_m1.2 <- dat_m1_est2 %>%
+  mutate(param_vals=factor(param_vals),
+         parameter=factor(parameter)) %>%
+  rename(prior_id=model_id) %>%
+  select(-fit_params)
+
+dat_m2.2 <- dat_m2_est2 %>%
+  mutate(param_vals=factor(param_vals),
+         parameter=factor(parameter)) %>%
+  rename(prior_id=model_id) %>%
+  select(-fit_params) %>%
+  mutate(prior_id=as.character(ifelse(as.numeric(prior_id) > 3, 
+                                      as.numeric(prior_id)-1, 
+                                      prior_id)))
+
+# write it out!!
+dat_m1.2 %>% 
+  select(prior_id, everything()) %>%
+  arrange(prior_id, parameter) %>%
+  mutate_if(is.numeric, ~signif(., digits=4)) %>%
+  write_csv("m1_vary_prior_est.csv")
+
+dat_m2.2 %>% 
+  select(prior_id, everything()) %>%
+  arrange(prior_id, parameter) %>%
+  mutate_if(is.numeric, ~signif(., digits=4)) %>%
+  write_csv("m2_vary_prior_est.csv")
+
+
+# clean up the comparison tables
+comp_m1.2 <- m1_compare %>% 
+  select(-params_id, -fit_params) %>%
+  mutate(model_id=unlist(model_id)) %>%
+  rename(prior_id=model_id) 
+
+
+comp_m2.2 <- m2_compare %>% 
+  select(-params_id, -fit_params) %>%
+  rename(prior_id=model_id) %>%
+  mutate(prior_id=as.character(ifelse(as.numeric(prior_id) > 3, 
+                                      as.numeric(prior_id)-1, 
+                                      prior_id))) 
+
+# write them out
+comp_m1.2 %>% 
+  select(prior_id, everything()) %>%
+  mutate_if(~ is.numeric(.), ~ifelse(abs(.) < 1000, signif(., digits=4), .)) %>%
+  write_csv("m1_loo_comp.csv")
+comp_m2.2 %>% 
+  select(prior_id, everything()) %>%
+  mutate_if(~ is.numeric(.), ~ifelse(abs(.) < 1000, signif(., digits=4), .)) %>%
+  write_csv("m2_loo_comp.csv")
+
+```
+
+
+Put together data
+```{r}
+
+# M1
+dat_m1.2s <- dat_m1.2 %>% select(prior_id, param_vals, parameter, ci_l, est, ci_h)
+comp_m1.2s <- comp_m1.2 %>% select(prior_id, param_vals, elpd_loo, se_elpd_loo) %>%
+  mutate(parameter="ELPD-LOO",
+         ci_l=elpd_loo-1.96*se_elpd_loo,
+         ci_h=elpd_loo+1.96*se_elpd_loo) %>%
+  rename(est=elpd_loo) %>%
+  select(colnames(dat_m1.2s))
+
+comp_m1.2a <- comp_m1.2 %>% select(prior_id, param_vals, elpd_diff, se_diff) %>%
+  mutate(parameter="ELPD-DIFF",
+         ci_l=elpd_diff-1.96*se_diff,
+         ci_h=elpd_diff+1.96*se_diff) %>%
+  rename(est=elpd_diff) %>%
+  select(colnames(dat_m1.2s))
+
+m1_both <- dat_m1.2s %>% 
+  bind_rows(comp_m1.2a) %>%
+  mutate(parameter=factor(parameter, levels=c(levels(dat_m1.2s$parameter), "ELPD-DIFF")),
+         param_vals=factor(param_vals, levels=comp_m1.2a$param_vals))
+
+
+# M2
+dat_m2.2s <- dat_m2.2 %>% select(prior_id, param_vals, parameter, ci_l, est, ci_h)
+comp_m2.2s <- comp_m2.2 %>% select(prior_id, param_vals, elpd_loo, se_elpd_loo) %>%
+  mutate(parameter="ELPD-LOO",
+         ci_l=elpd_loo-1.96*se_elpd_loo,
+         ci_h=elpd_loo+1.96*se_elpd_loo) %>%
+  rename(est=elpd_loo) %>%
+  select(colnames(dat_m2.2s))
+
+comp_m2.2a <- comp_m2.2 %>% select(prior_id, param_vals, elpd_diff, se_diff) %>%
+  mutate(parameter="ELPD-DIFF",
+         ci_l=elpd_diff-1.96*se_diff,
+         ci_h=elpd_diff+1.96*se_diff) %>%
+  rename(est=elpd_diff) %>%
+  select(colnames(dat_m2.2s))
+
+m2_both <- dat_m2.2s %>% 
+  bind_rows(comp_m2.2a) %>%
+  mutate(parameter=factor(parameter, levels=c(levels(dat_m2.2s$parameter), "ELPD-DIFF")),
+         param_vals=factor(param_vals, levels=comp_m2.2a$param_vals))
+
+
+```
+
+Make figures
+```{r}
+s8a <- ggplot(m1_both, aes(x=param_vals, y=est))+
+  geom_point(aes(color=param_vals))+
+  geom_errorbar(aes(ymin=ci_l, ymax=ci_h, color=param_vals))+
+  facet_wrap(.~ parameter,scales = "free")+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        #axis.line = element_line(colour = "black"),
+        panel.background = element_blank())+
+  ylab("estimated value")
+
+s8b <- ggplot(m2_both, aes(x=param_vals, y=est))+
+  geom_point(aes(color=param_vals))+
+  geom_errorbar(aes(ymin=ci_l, ymax=ci_h, color=param_vals))+
+  facet_wrap(.~ parameter,scales = "free", ncol=4)+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        #axis.line = element_line(colour = "black"),
+        panel.background = element_blank())+
+  ylab("estimated value")
+
+grid.arrange(s8a, s8b, heights=c(2,2))
+
+```
+
+

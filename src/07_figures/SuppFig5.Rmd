@@ -1,0 +1,235 @@
+---
+title: "SuppFig%"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+Code for making a GWAS mirror plot.
+
+```{r}
+require('ggman')
+require('tidyverse')
+minp <- 10**-30
+```
+
+Read in the data
+```{r}
+# read in the data
+t_onesex <- read_tsv("results/ukb24983_v2_hg19.Testosterone_onesex_t.genotyped.glm.linear")
+
+t_zerosex <- read_tsv("results/ukb24983_v2_hg19.Testosterone_zerosex.genotyped.glm.linear.gz")
+
+t_f <- read_csv("out_tables/bio_m2_fspec.csv") %>% filter(trait=="Testosterone")
+t_m <- read_csv("out_tables/bio_m2_mspec.csv") %>% filter(trait=="Testosterone")
+t_s <- read_csv("out_tables/bio_m2_shared.csv") %>% filter(trait=="Testosterone")
+
+```
+
+Clean up the data for plotting
+```{r}
+t_onesex2 <- t_onesex %>% 
+  rename("CHR"=`#CHROM`, SNP=ID, BP=POS, zscore=T_STAT) %>% 
+  select(SNP,CHR,BP,P) %>% 
+  mutate(CHR=case_when(CHR=="X" ~ 23, 
+                       CHR=="XY" ~24,
+                       CHR=="Y" ~25, 
+                       TRUE ~ as.numeric(CHR)) ) %>% 
+  filter(!is.na(P)) %>% 
+  mutate(P=ifelse( P < minp, minp, P)) 
+
+t_zerosex2 <- t_zerosex %>% 
+  rename("CHR"=`#CHROM`, SNP=ID, BP=POS, zscore=T_STAT) %>% 
+  select(SNP,CHR,BP,P) %>% 
+  mutate(CHR=case_when(CHR=="X" ~ 23, 
+                       CHR=="XY" ~24, 
+                       CHR=="Y" ~25, 
+                       TRUE ~ as.numeric(CHR)) ) %>% 
+  filter(!is.na(P)) %>% 
+  mutate(P=ifelse( P < minp, minp, P)) 
+
+y_chr_var <- t_onesex2 %>% filter(CHR==25) 
+y_chr_var$P <- NA
+t_zerosex2 <- rbind(t_zerosex2, y_chr_var)
+
+overlapping_ids <- intersect(t_zerosex2$SNP, t_onesex2$SNP)
+t_zerosex2 <- t_zerosex2 %>% filter(SNP %in% overlapping_ids)
+t_onesex2 <- t_onesex2 %>% filter(SNP %in% overlapping_ids)
+
+# filter based on LD vars
+load("results/dat_Testosterone.RData")
+m2_snps <- unlist(dat$snp)
+ld_filtered_ids <- setdiff(overlapping_ids, m2_snps)
+
+# remove all LD filtered Ids with P-val > 10**-3 in both
+ld_nonsig_z <- t_zerosex2 %>% filter(SNP %in% ld_filtered_ids & P > 10**-2)
+ld_nonsig_o <- t_onesex2 %>% filter(SNP %in% ld_filtered_ids & P > 10**-2)
+ld_nonsig <- intersect(ld_nonsig_o$SNP, ld_nonsig_z$SNP)
+
+t_zerosex3 <- t_zerosex2 %>% filter(!SNP %in% ld_nonsig)
+t_onesex3 <- t_onesex2 %>% filter(!SNP %in% ld_nonsig)
+
+# for the remaining pval > 10**-3 in both, remove 90%
+nonsig_z <- t_zerosex3 %>% filter(P > 10**-2)
+nonsig_o <- t_onesex3 %>% filter(P > 10**-2)
+nonsig <- intersect(nonsig_z$SNP, nonsig_o$SNP)
+rem_nonsig <- sample(nonsig, 0.1*length(nonsig), replace=FALSE)
+sig <- setdiff(t_zerosex3$SNP, nonsig)
+
+zerosex4 <- rbind(t_zerosex3 %>% filter(SNP %in% sig), t_zerosex3 %>% filter(SNP %in% rem_nonsig))
+onesex4 <- rbind(t_onesex3 %>% filter(SNP %in% sig), t_onesex3 %>% filter(SNP %in% rem_nonsig))
+
+```
+
+Make the mirror plot
+```{r}
+
+# Plotting Code is adapted from: 
+# http://www.danielroelfs.com/coding/manhattan_plots/
+
+# Prepare the data
+nCHR <- length(unique(onesex4$CHR))
+onesex4$BPcum <- 0
+s <- 0
+nbp <- c()
+
+for (i in 1:nCHR){
+  nbp[i] <- max(onesex4[onesex4$CHR == i,]$BP)
+  onesex4[onesex4$CHR == i,"BPcum"] <- onesex4[onesex4$CHR == i,"BP"] + s
+  s <- s + nbp[i]
+}
+
+zerosex4$BPcum <- 0
+s <- 0
+nbp <- c()
+for (i in 1:24){
+  nbp[i] <- max(zerosex4[zerosex4$CHR == i,]$BP)
+  zerosex4[zerosex4$CHR == i,"BPcum"] <- zerosex4[zerosex4$CHR == i,"BP"] + s
+  s <- s + nbp[i]
+}
+
+ylim <- abs(floor(log10(min(onesex4$P)))) + 2
+sig <- 5*(10**-8)
+
+zerosex5 <- zerosex4 %>% mutate(P=-log10(P))
+onesex5 <- onesex4 %>% mutate(P=log10(P))
+
+# create the groups
+onesex5 <- onesex5 %>% mutate(group=
+                       case_when(SNP %in% t_f$ID ~ "female-specific",
+                                 SNP %in% t_m$ID ~ "male-specific",
+                                 SNP %in% t_s$ID ~ "shared", 
+                                 SNP %in% ld_filtered_ids ~ "ld_filtered",
+                                 ((CHR %% 2) == 0 ) ~ "other_even",
+                                 TRUE ~ "other_odd"))
+
+zerosex5 <- zerosex5 %>% mutate(group=
+                       case_when(SNP %in% t_f$ID ~ "female-specific",
+                                 SNP %in% t_m$ID ~ "male-specific",
+                                 SNP %in% t_s$ID ~ "shared", 
+                                 SNP %in% ld_filtered_ids ~ "ld_filtered",
+                                 ((CHR %% 2) == 0) ~ "other_even",
+                                 TRUE ~ "other_odd")) 
+
+gwas.dat2 <- rbind(zerosex5, onesex5)
+
+gwas.dat3 <- gwas.dat2 %>% 
+  filter(!is.na(P)) %>% 
+  mutate(CHR=case_when(
+    CHR == 24  ~"Y",
+    CHR == 25 ~ "Y",
+    CHR == 23 ~"X",  
+    TRUE ~ as.character(CHR)))
+
+axis.set <- gwas.dat3 %>% 
+  group_by(CHR) %>% 
+  summarize(center = (max(BPcum) + min(BPcum)) / 2)
+
+t_f2 <- t_f %>% separate_rows(GENE, sep=",")
+t_m2 <- t_m %>% separate_rows(GENE, sep=",")
+
+zerosex6 <- right_join(zerosex5, t_f %>% 
+                         filter(P.f < 10**-20) %>% 
+                         arrange(P.f) %>% 
+                         select(ID, GENE) %>% 
+                         filter(!is.na(GENE)), by=c("SNP"="ID"))
+zerosex6 <- zerosex6[!duplicated(zerosex6$GENE),]
+
+onesex6 <- right_join(onesex5, t_m %>% 
+                        filter(P.m < 10**-20) %>% 
+                        arrange(P.m) %>% 
+                        select(ID, GENE) %>% 
+                        ungroup(GENE) %>% 
+                        filter(!is.na(GENE) & GENE !="-"), 
+                      by=c("SNP"="ID"))
+onesex6$GENE[str_detect(onesex6$GENE, "TNFSF12-TNFSF13")] <- "TNFSF12-TNFSF13"
+onesex6 <- onesex6[!duplicated(onesex6$GENE),]
+
+zerosex7 <- right_join(zerosex5, t_f2 %>% 
+                         filter(Consequence=="missense_variant") %>% 
+                         arrange(P.f) %>% 
+                         select(ID, GENE) %>% 
+                         filter(!is.na(GENE)), by=c("SNP"="ID")) %>%
+  group_by(GENE) %>%
+  mutate(GENE2=strsplit(GENE, ",")[[1]][[1]])
+zerosex7 <- zerosex7[!duplicated(zerosex7$GENE),]
+
+onesex7 <- right_join(onesex5, t_m %>% 
+                        filter(Consequence=="missense_variant") %>% 
+                        arrange(P.f) %>% 
+                        select(ID, GENE) %>% 
+                        filter(!is.na(GENE)), by=c("SNP"="ID")) %>% 
+  group_by(GENE) %>% 
+  mutate(GENE2=strsplit(GENE, ",")[[1]][[1]])
+onesex7 <- onesex7[!duplicated(onesex7$GENE2),]
+
+
+```
+
+
+
+```{r}
+# plot the legend separately
+legend_dat <- gwas.dat3 %>% 
+  sample_n(10000) %>%
+  filter(group %in% c("female-specific", "male-specific", 
+                      "shared", "ld_filtered")) %>%
+  mutate(group=factor(group, 
+                      levels=c("female-specific", "male-specific", 
+                               "shared", "ld_filtered")))
+ggplot(legend_dat, aes(x=BPcum, y=P)) +
+     geom_point(aes(color=group), alpha = 0.9) +
+     scale_color_manual(values=c("#FC8D62", "#8DA0CB", "magenta", "gray79" ))+
+  theme(legend.key = element_rect(fill = NA, color = NA))
+ggsave("s5_legend.pdf", dpi="print")
+
+# mh plot
+manhplot <- ggplot(gwas.dat3, aes(x=BPcum, y=P)) +
+  geom_point(aes(color=as.factor(group)), alpha = 0.3) +
+  scale_color_manual(values=c("#FC8D62", "gray79", "#8DA0CB", 
+                              "gray46", "gray60", "magenta")) +
+  geom_hline(yintercept = 0, color = "black")+ 
+  geom_hline(yintercept = -log10(sig), color = "grey40", linetype = "dashed") +
+  geom_hline(yintercept = log10(sig), color = "grey40", linetype = "dashed") +
+  geom_point(aes(color=as.factor(group), alpha = as.factor(group)), size = 1.25) +
+  scale_alpha_manual(values=c(0.6, 0, 0.6, 0, 0, 0.6))+
+  scale_x_continuous(label = axis.set$CHR, breaks = axis.set$center) +
+  labs(x = NULL, y = "-log10(p)") + 
+  theme_minimal() +
+  theme(legend.position = "none",
+    panel.border = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.text.x = element_text(angle = 60, size = 8, vjust = 0.5))
+
+# Mirror plot with low P labeled
+manhplot + geom_label_repel(aes(label=GENE), size=2, data=rbind(zerosex6, onesex6))
+ggsave("figures/supp_fig5.pdf")
+
+# Mirror plot with missense labeled
+manhplot + geom_label_repel(aes(label=GENE2), size=2, data=rbind(zerosex7, onesex7))
+
+
+```
+
+

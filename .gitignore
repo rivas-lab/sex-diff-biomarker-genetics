@@ -7,3 +7,4 @@ data2/*
 phefiles/*
 tmp*
 *.ipynb_checkpoints*
+*.html
