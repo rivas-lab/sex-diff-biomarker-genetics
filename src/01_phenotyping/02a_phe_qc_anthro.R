@@ -1,10 +1,16 @@
+# 02a_phe_qc_anthro.R
+# E Flynn
+# updated 05/2020
+#
+# Phenotype QC for anthropometric traits
+
 require('tidyverse')
 require('data.table')
-PHE.DIR <- "../../../phefiles"
-ANTHRO.DIR <- "../../../phefiles/anthro"
+PHE.DIR <- "phefiles"
+ANTHRO.DIR <- "phefiles/anthro"
 
 
-COVARIATE_MATRIX <- '/oak/stanford/groups/mrivas/ukbb24983/sqc/ukb24983_GWAS_covar.phe'
+COVARIATE_MATRIX <- 'ukb24983_GWAS_covar.phe'
 # read in covariate matrix
 cov_mat <- fread(COVARIATE_MATRIX, data.table=FALSE) %>% select(IID, sex)
 

@@ -9,7 +9,7 @@ source("src/04_bmm/heritability_utils.R")
 options(stringsAsFactors=FALSE)
 
 # ------ Set up the variant annotation table ------ #
-variant_tab <- fread('/oak/stanford/groups/mrivas/private_data/ukbb/variant_filtering/variant_filter_table.new.tsv.gz', data.table=FALSE)
+variant_tab <- fread('variant_filtering/variant_filter_table.new.tsv.gz', data.table=FALSE)
 variant_sm <- variant_tab %>% dplyr::select( ID, POS, REF, ALT, Gene_symbol, maf, Consequence, HGVSp) 
 
 

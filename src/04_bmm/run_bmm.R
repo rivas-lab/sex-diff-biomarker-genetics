@@ -3,6 +3,7 @@
 # 11/17/2017
 #
 # Updated code for running BMM model for a trait.
+# NOTE: this code has been made into the R package: https://github.com/rivas-lab/semm
 #
 # Key updates:
 #   - sped up model/data loading by removing log_lik calculation because I was not using this
@@ -20,7 +21,7 @@ require('reshape2')
 require('parallel')
 
 DATA.FOLDER <- "data/"
-GWAS.DIR <- "data/gwas_0522/"
+GWAS.DIR <- "data/gwas/"
 snps.to.keep <- read.table(sprintf("%s/snp_filt_list_wX_v3.txt", DATA.FOLDER), header=FALSE, 
     colClasses="character")
 

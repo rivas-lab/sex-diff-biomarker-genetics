@@ -4,7 +4,6 @@
 #SBATCH --error=logs/ss_%A_%a.err
 #SBATCH --nodes=4
 #SBATCH --time=2:00:00 
-#SBATCH --partition=rbaltman,owners
 #SBATCH --mem=20000
 # usage:
 #    sbatch submit_run_bmm.sh <model> <trait> <ndim>  <outdir> <indir>

@@ -1,7 +1,13 @@
+# 02b_phe_qc_biomarker.R
+# E Flynn
+# updated 05/2020
+#
+# Phenotype QC for biomarker traits
+
 require('tidyverse')
-PHE.DIR <- "../../../phefiles"
-BIOMARKER_F_PATH <- "../../../phefiles/biomarker_f"
-BIOMARKER_M_PATH <- "../../../phefiles/biomarker_m"
+PHE.DIR <- "phefiles"
+BIOMARKER_F_PATH <- "phefiles/biomarker_f"
+BIOMARKER_M_PATH <- "phefiles/biomarker_m"
 
 # get a list of traits
 biomarker_files <- list.files(path=BIOMARKER_F_PATH, pattern="*.phe")
