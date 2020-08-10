@@ -22,15 +22,14 @@ else
     covariates="None"
 fi
 phenotype_name="Testosterone"
-phe_file="/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/phe_data/v2.1-no-covars/Testosterone.phe"
-genotype_pfile="/scratch/groups/mrivas/ukbb24983/array_combined/pgen/ukb24983_cal_hla_cnv"
-results_dir="/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1-no-covars/${pop_name}_no-covars"
+phe_file="@@@@@/sex-div-analysis/06_snpnet/phe_data/v2.1-no-covars/Testosterone.phe"
+genotype_pfile="@@@@@/array_combined/pgen/ukb24983_cal_hla_cnv"
+results_dir="@@@@@/sex-div-analysis/06_snpnet/v2.1-no-covars/${pop_name}_no-covars"
 
 if [ ! -d ${results_dir} ] ; then mkdir -p ${results_dir} ; fi
 
 echo "[$0 $(date +%Y%m%d-%H%M%S)] [start] hostname = $(hostname) SLURM_JOBID = ${SLURM_JOBID:=0}; pop_name = ${pop_name}; phenotype = ${phenotype_name}" >&2
 
-# ml load snpnet_yt/0.3.5
 ml load snpnet_yt/0.3.6
 
 bash ${snpnet_wrapper} --nCores ${cores} --memory ${mem} \

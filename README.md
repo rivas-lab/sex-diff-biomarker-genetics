@@ -9,4 +9,4 @@ Supporting code for "Sex specific genetic effects across biomarkers" paper https
 
 For the R package containing the SEMM method described in the paper, see https://github.com/rivas-lab/semm.
 
-If you have any questions please contact the authors at "erflynn-DOT-stanford-DOT-edu".
+If you have any questions please contact the authors at "erflynn-AT-stanford-DOT-edu".
