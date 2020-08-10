@@ -22,7 +22,6 @@ rem.snps <- filt.file[filt.file$all_filters==0,] # 655,654 out of 784,256
 rem.snps2 <- rem.snps[rem.snps$ld_indep,] # 361,424
 
 # updated LD filtering later
-#prune_snps <- read.table("/scratch/PI/mrivas/users/erflynn/sex_div_gwas/gwas_scripts/ld_dat/all_prune.in", header=FALSE, colClasses="character")
 #keep.snps <- (intersect(rem.snps$ID,prune_snps$V1))
 
 write.table(rem.snps2, sprintf("%s/snp_filt_metadata.txt", OUT_DIR))
