@@ -36,7 +36,7 @@ def filterPopFile(outDir, popFile='', keepSexFile=''):
 def make_plink_command(bpFile, pheFile, outFile, outDir, pop, cores=None, memory=None, related=False, plink1=False, 
                        arrayCovar=False, sexDiv=False, keepSex='', keepSexFile='', includeX=False):
     # paths to plink genotypes, input phenotypes, output directory are passed
-    qcDir         = '/oak/stanford/groups/mrivas/ukbb24983/sqc/'
+    qcDir         = '/ukbb24983/sqc/'
     popFile       = os.path.join(qcDir,'population_stratification','ukb24983_{}.phe'.format(pop)) if pop != 'all' else ''
     unrelatedFile = os.path.join(qcDir,'ukb24983_v2.not_used_in_pca.phe') if not related else '' 
     arrayVarFile  = os.path.join(qcDir,'{}_array_variants.txt'.format('both' if arrayCovar else 'one')) if '/cal/' in bpFile else ''
@@ -48,9 +48,9 @@ def make_plink_command(bpFile, pheFile, outFile, outDir, pop, cores=None, memory
     else:
         is_biomarker_binary = os.path.basename(pheFile).split('_')[1]  == 'binary'
     if is_cnv_burden:
-        covarFile = '/oak/stanford/groups/mrivas/ukbb24983/cnv/pgen/ukb24983_cnv_burden.covar'
+        covarFile = 'ukbb24983/cnv/pgen/ukb24983_cnv_burden.covar'
     elif is_biomarker_binary:
-        covarFile = '/oak/stanford/groups/mrivas/projects/biomarkers/covariate_corrected/output/covariates/logistic.covariates.phe'
+        covarFile = 'biomarkers/'
     else:
         covarFile = os.path.join(qcDir, 'ukb24983_GWAS_covar.phe')
     
@@ -114,7 +114,7 @@ def run_gwas(kind, pheFile, outDir='', pop='white_british', related=False, plink
     if pop not in ['all', 'white_british', 'non_british_white', 'african', 's_asian', 'e_asian']:
         raise ValueError("population must be one of (all, white_british, non_british_white, african, s_asian, e_asian)")
     # paths for running gwas
-    pgen_root='/oak/stanford/groups/mrivas/private_data/ukbb/24983/'
+    pgen_root='ukbb/24983/'
     imp_bfile_path=os.path.join(pgen_root,'imp','pgen','ukb24983_imp_chr${SLURM_ARRAY_TASK_ID}_v3')
     cal_bfile_path=os.path.join(pgen_root,'cal','pgen','ukb24983_cal_cALL_v2_hg19')
     exome_spb_path=os.path.join(pgen_root,'exome','pgen','spb','data','ukb_exm_spb')

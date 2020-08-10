@@ -4,7 +4,7 @@
 #
 # Utilities for extracting heritability information.
 
-DATA.DIR <- '/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data'
+DATA.DIR <- 'data/'
 
 
 getPosterior <- function(B, SE, p, Sigma){

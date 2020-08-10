@@ -8,3 +8,4 @@ phefiles/*
 tmp*
 *.ipynb_checkpoints*
 *.html
+.Rproj.user

@@ -55,7 +55,7 @@ posteriorSNPtable <- function(dat, fit){
 
 
 annotateSNP <- function(tab){
-    DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
+    DATA.FOLDER <- "data/"
 
     if (is.null(dim(tab))){return(tab)}
     gene.table <- read.table(sprintf("%s/snp_gene_table.txt", DATA.FOLDER), colClasses='character')

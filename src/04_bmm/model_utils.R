@@ -15,7 +15,7 @@ require('rstan')
 BINARY.SE.CUTOFF <- 1 ## might want to adjust
 QUANT.SE.CUTOFF <- 0.2
 
-DATA.FOLDER <- "/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data/"
+DATA.FOLDER <- "data/"
 
 
 # list of filtered variants - how was this constructed?? need to check

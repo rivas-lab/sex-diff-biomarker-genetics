@@ -4,8 +4,8 @@
 #
 # Code for filtering SNPs. 
 
-FILTER_DIR = '/oak/stanford/groups/mrivas/private_data/ukbb/variant_filtering'
-OUT_DIR = '/scratch/users/erflynn/bmm_project/data/' #'/scratch/PI/mrivas/users/erflynn/sex_div_gwas/data'
+FILTER_DIR = 'variant_filtering/'
+OUT_DIR = 'data/' 
 
 require('data.table')
 

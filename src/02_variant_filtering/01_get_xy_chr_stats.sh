@@ -8,11 +8,10 @@
 
 N=${1} # the chromosome (X, Y, XY, MT)
 
-export PATH=/oak/stanford/groups/mrivas/software/plink2/20170904/:$PATH
 
-export PATH=/oak/stanford/groups/mrivas/software/plink1.9/plink1.90b4.6/:$PATH # using plink1.9 for indep
+
 # updated to match other chromosomes
-target=/oak/stanford/groups/mrivas/ukbb/24983
+target=ukbb/24983
 
 bed=$target/cal/pgen/ukb24983_cal_chr${N}_v2.bed
 bim=$target/snp/snp_download/ukb_snp_chr${N}_v2.bim
