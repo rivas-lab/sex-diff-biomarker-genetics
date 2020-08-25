@@ -1,5 +1,9 @@
 # Polygenic risk modeling with `snpnet`
 
+We evaluated the performance of the `snpnet` PRS models using a held-out test set.
+
+The source files summarizing the data points shown in the figures are in [`tbls`](tbls) directory.
+
 ## The snpnet performance plot with the full set of covariates
 
 ![Testosterone.combined.png](Testosterone.combined.png)

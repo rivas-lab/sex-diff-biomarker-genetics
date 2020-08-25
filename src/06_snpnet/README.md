@@ -1,29 +1,14 @@
-# Polygenic risk prediction of Testosterone level
+# Polygenic prediction of Testosterone level using `snpnet`
 
-- `phe_data`: scripts & notebooks to prepare input file (phenotype file) for `snpnet`
-- `src_array_combined`: A script to call `snpnet`
-- `out`: Outputs from `snpnet`
-- `plots`: Notebook to generate plots
 
-In each directory, we have multiple versions
-- `v1`: An old version prepared during ASHG2019. This version used a different set of covariates when comparing the sex-specific model and the combined model.
-- `v2`: A revised version with a fix for the covariates inconsistency issue. We tried to ask `snpnet` to deal with the covariates.
-- `v2.1`: the final results, where we passed the residuals from the covariate correction.
+We constructed polygenic risk scores (PRSs) using [snpnet](https://github.com/rivas-lab/snpnet).
 
-## File location
+![Testosterone.combined.png](3_plots/Testosterone.combined.png)
 
-### PRS score files
+## sub-directories
 
-```
-/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/combined/Testosterone_residuals/results/score/Testosterone_residuals.sscore
-/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/onesex/Testosterone_residuals/results/score/Testosterone_residuals.sscore
-/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/zerosex/Testosterone_residuals/results/score/Testosterone_residuals.sscore
-```
+The PRS analysis consists of 3 steps and the analysis scripts used in each the steps are organized in the following directories.
 
-### BETAs from snpnet
-
-```
-/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/combined/Testosterone_residuals/results/betas.tsv
-/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/onesex/Testosterone_residuals/results/betas.tsv
-/oak/stanford/groups/mrivas/users/ytanigaw/repos/rivas-lab/sex-div-analysis/snpnet/out/v2.1/zerosex/Testosterone_residuals/results/betas.tsv
-```
+- [`1_phe_data_prep`](1_phe_data_prep): scripts & notebooks to prepare input file (phenotype file) for `snpnet`
+- [`2_snpnet-wrapper`](2_snpnet-wrapper): scripts to call `snpnet` in our cluster computing environment and the post-processing scripts.
+- [`3_plots`](3_plots): we evaluate the predictive performance of our PRS models and generate plots.
