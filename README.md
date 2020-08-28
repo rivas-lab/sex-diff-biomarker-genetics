@@ -1,4 +1,4 @@
-# sex-div-analysis
+# sex-diff-biomarker-genetics
 
 ### Bayesian Mixture Models for examining sex-specific heritability and identifying sex-specific variants.
 
